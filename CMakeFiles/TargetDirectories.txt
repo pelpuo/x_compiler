@@ -1,0 +1,3 @@
+/home/panda/Documents/compiler/CMakeFiles/comp.dir
+/home/panda/Documents/compiler/CMakeFiles/edit_cache.dir
+/home/panda/Documents/compiler/CMakeFiles/rebuild_cache.dir
