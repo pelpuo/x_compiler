@@ -26,7 +26,7 @@ typedef enum{
     INT,
     VOID,
     DECREMENT,
-    NEGATION,
+    COMPLEMENT,
     UNKNOWN,
 }TokenType;
 
@@ -49,7 +49,7 @@ static string TokenStr[] = {
     "INT",
     "VOID",
     "DECREMENT",
-    "NEGATION",
+    "COMPLEMENT",
     "UNKNOWN",
 };
 

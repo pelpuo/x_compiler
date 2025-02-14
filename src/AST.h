@@ -90,6 +90,14 @@ public:
   BinaryOp(char op, std::unique_ptr<Expr> left, std::unique_ptr<Expr> right)
       : op(op), left(std::move(left)), right(std::move(right)) {}
 
+    void print() {
+      cout << "BinaryOp: ";
+      left->print();
+      cout << " " << op << " ";
+      right->print();
+      cout << endl;
+    }
+
  std::vector<TAC> generateTAC(std::string &tempVar) override {
         std::vector<TAC> code;
         std::string leftTemp, rightTemp;
@@ -146,7 +154,7 @@ public:
     // Map TokenType to TAC operation
     std::string opStr;
     if (op == TokenType::MINUS) opStr = "NEG";
-    else if (op == TokenType::NEGATION) opStr = "~";
+    else if (op == TokenType::COMPLEMENT) opStr = "~";
 
     // Emit TAC for unary operation
     code.push_back(TAC(opStr, exprTemp, "", tempVar));

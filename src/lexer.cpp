@@ -62,7 +62,7 @@ void Lexer::next(Token &token) {
     BufferPtr++;
     return;
   case '~':
-    token.type = TokenType::NEGATION;
+    token.type = TokenType::COMPLEMENT;
     token.line = line;
     BufferPtr++;
     return;

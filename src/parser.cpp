@@ -93,39 +93,21 @@ Stmt *Parser::parseStatement()
 
 Expr *Parser::parseExpr()
 {
-  if (token.type == TokenType::NUM)
+  Expr *left = parseFactor();
+
+  while (token.type == TokenType::PLUS 
+    || token.type == TokenType::MINUS
+    || token.type == TokenType::MUL
+    || token.type == TokenType::MOD
+    || token.type == TokenType::DIV)
   {
-    string tokentext = token.value.value();
-    consume(TokenType::NUM);
-    return new IntLiteral(stoi(tokentext));
-  }
-  else if (token.type == TokenType::ID)
-  {
-    string tokentext = token.value.value(); 
-    consume(TokenType::ID);
-    return new Variable(tokentext);
-  }
-  else if (token.type == TokenType::NEGATION)
-  {
-    consume(TokenType::NEGATION);
-    Expr *expr = parseExpr();
-    return new UnaryOp(TokenType::NEGATION, std::unique_ptr<Expr>(expr));
-  }
-  else if (token.type == TokenType::LEFT_PAREN)
-  {
-    consume(TokenType::LEFT_PAREN);
-    Expr *expr = parseExpr();
-    consume(TokenType::RIGHT_PAREN);
-    return expr;
-  }else if(token.type == TokenType::MINUS){
-    consume(TokenType::MINUS);
-    Expr *expr = parseExpr();
-    return new UnaryOp(TokenType::MINUS, std::unique_ptr<Expr>(expr));
-  }else{
-    error();
+    TokenType op = token.type;
+    advance();
+    Expr *right = parseFactor();
+    left = new BinaryOp(op, std::unique_ptr<Expr>(left), std::unique_ptr<Expr>(right));
   }
 
-  return nullptr;
+  return left;
 }
 
 Expr *Parser::parseTerm()
@@ -135,7 +117,23 @@ Expr *Parser::parseTerm()
 
 Expr *Parser::parseFactor()
 {
-    return nullptr;
+  if(token.type == TokenType::NUM){
+    string tokentext = token.value.value();
+    consume(TokenType::NUM);
+    return new IntLiteral(stoi(tokentext));
+  }else if(token.type == TokenType::COMPLEMENT || token.type == TokenType::MINUS){
+    advance();
+    Expr *expr = parseExpr();
+    return new UnaryOp(token.type, std::unique_ptr<Expr>(expr));
+  }else if(token.type == TokenType::LEFT_PAREN){
+    consume(TokenType::LEFT_PAREN);
+    Expr *expr = parseExpr();
+    consume(TokenType::RIGHT_PAREN);
+    return expr;
+  }else{
+    error();
+  }
+
 }
 
 Parser::Parser(Lexer &lex) : lexer(lex), HasError(false) { advance(); }
