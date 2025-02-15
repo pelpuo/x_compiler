@@ -157,7 +157,19 @@ Stmt *Parser::parseStatement()
 
 Expr *Parser::parseExpr(int minPrec)
 {
-  Expr *left = parseFactor();
+  Expr *left;
+
+  if(token.type == TokenType::LOGICAL_NOT 
+    || token.type == TokenType::MINUS 
+    || token.type == TokenType::COMPLEMENT){
+    TokenType op = token.type;
+    int prec = getPrecedence(op);
+    advance();
+    Expr *right = parseExpr(getPrecedence(op)+1);
+    left = new UnaryOp(op, std::unique_ptr<Expr>(right));
+  }else{
+    left = parseFactor();
+  }
 
   while (isBinaryOp(token.type) && getPrecedence(token.type) >= minPrec)
   {
@@ -183,11 +195,14 @@ Expr *Parser::parseFactor()
     string tokentext = token.value.value();
     consume(TokenType::NUM);
     return new IntLiteral(stoi(tokentext));
-  }else if(token.type == TokenType::COMPLEMENT || token.type == TokenType::MINUS){
-    advance();
-    Expr *expr = parseExpr();
-    return new UnaryOp(token.type, std::unique_ptr<Expr>(expr));
-  }else if(token.type == TokenType::LEFT_PAREN){
+  }
+  // else if(token.type == TokenType::COMPLEMENT || token.type == TokenType::MINUS || token.type == TokenType::LOGICAL_NOT){
+  //   TokenType op = token.type;
+  //   advance();
+  //   Expr *expr = parseExpr();
+  //   return new UnaryOp(op, std::unique_ptr<Expr>(expr));
+  // }
+  else if(token.type == TokenType::LEFT_PAREN){
     consume(TokenType::LEFT_PAREN);
     Expr *expr = parseExpr();
     consume(TokenType::RIGHT_PAREN);
