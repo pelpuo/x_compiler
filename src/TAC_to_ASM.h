@@ -67,6 +67,10 @@ class TACtoASM{
                     // Division
                     outfile << "    div " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg1) << ", " << mapToRegister(tac.arg2) << "\n";
                 }
+                else if (tac.op == "%") {
+                    // Division
+                    outfile << "    rem " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg1) << ", " << mapToRegister(tac.arg2) << "\n";
+                }
                 else if (tac.op == "mv") {
                     // Move value
                     outfile << "    mv " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg1) << "\n";

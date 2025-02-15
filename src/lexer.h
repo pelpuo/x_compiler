@@ -28,6 +28,22 @@ typedef enum{
     DECREMENT,
     COMPLEMENT,
     UNKNOWN,
+    
+    BITWISE_AND,
+    BITWISE_OR,
+    BITWISE_XOR,
+    LEFT_SHIFT,
+    RIGHT_SHIFT,
+
+    LOGICAL_AND,
+    LOGICAL_OR,
+    LOGICAL_NOT,
+    EQUAL_EQUAL,
+    NOT_EQUAL,
+    LESS_THAN,
+    GREATER_THAN,
+    LESS_THAN_EQUAL,
+    GREATER_THAN_EQUAL,
 }TokenType;
 
 static string TokenStr[] = {
@@ -51,6 +67,21 @@ static string TokenStr[] = {
     "DECREMENT",
     "COMPLEMENT",
     "UNKNOWN",
+    "BITWISE_AND",
+    "BITWISE_OR",
+    "BITWISE_XOR",
+    "LEFT_SHIFT",
+    "RIGHT_SHIFT",
+    "LOGICAL_AND",
+    "LOGICAL_OR",
+    "LOGICAL_NOT",
+
+    "EQUAL_EQUAL",
+    "NOT_EQUAL",
+    "LESS_THAN",
+    "GREATER_THAN",
+    "LESS_THAN_EQUAL",
+    "GREATER_THAN_EQUAL",
 };
 
 typedef struct{

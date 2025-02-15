@@ -15,11 +15,13 @@ class Parser{
         void error();
         bool expect(TokenType type);
         bool consume(TokenType type);
-    
+        int getPrecedence(TokenType op);
+        bool isBinaryOp(TokenType type);
+
         ASTProgram *parseProgram();
         Func *parseFunction();
         Stmt *parseStatement();
-        Expr *parseExpr();
+        Expr *parseExpr(int minPrec = 0);
         Expr *parseTerm();
         Expr *parseFactor();
         

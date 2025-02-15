@@ -115,10 +115,32 @@ public:
         
         // Map TokenType to TAC operation
         std::string opStr;
-        if (op == TokenType::PLUS) opStr = "+";
-        else if (op == TokenType::MINUS) opStr = "-";
-        else if (op == TokenType::MUL) opStr = "*";
-        else if (op == TokenType::DIV) opStr = "/";
+        #define TOKEN_TO_STRING(token, str) \
+        case TokenType::token:          \
+          opStr = str;               \
+            break;
+
+        switch(op){
+          TOKEN_TO_STRING(PLUS, "+")
+          TOKEN_TO_STRING(MINUS, "-")
+          TOKEN_TO_STRING(MUL, "*")
+          TOKEN_TO_STRING(DIV, "/")
+          TOKEN_TO_STRING(MOD, "%")
+          TOKEN_TO_STRING(BITWISE_AND, "&")
+          TOKEN_TO_STRING(BITWISE_OR, "|")
+          TOKEN_TO_STRING(BITWISE_XOR, "^")
+          TOKEN_TO_STRING(LEFT_SHIFT, "<<")
+          TOKEN_TO_STRING(RIGHT_SHIFT, ">>")
+          TOKEN_TO_STRING(LOGICAL_AND, "&&")
+          TOKEN_TO_STRING(LOGICAL_OR, "||")
+          TOKEN_TO_STRING(EQUAL_EQUAL, "==")
+          TOKEN_TO_STRING(NOT_EQUAL, "!=")
+          TOKEN_TO_STRING(LESS_THAN, "<")
+          TOKEN_TO_STRING(GREATER_THAN, ">")
+          TOKEN_TO_STRING(LESS_THAN_EQUAL, "<=")
+          TOKEN_TO_STRING(GREATER_THAN_EQUAL, ">=")
+        }
+        #undef TOKEN_TO_STRING
 
         // Emit TAC for binary operation
         code.push_back(TAC(opStr, leftTemp, rightTemp, tempVar));
@@ -149,7 +171,7 @@ public:
     code.insert(code.end(), exprCode.begin(), exprCode.end());
 
     // Create a new temporary variable
-    tempVar = "t" + std::to_string(BinaryOp::tempVarCounter++);
+    tempVar = "t" + std::to_string(tempVarCounter++);
 
     // Map TokenType to TAC operation
     std::string opStr;

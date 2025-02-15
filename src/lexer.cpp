@@ -88,9 +88,15 @@ void Lexer::next(Token &token) {
     BufferPtr++;
     return;
   case '=':
-    token.type = TokenType::EQUALS;
-    token.line = line;
-    BufferPtr++;
+    if (*(BufferPtr + 1) == '=') {
+      token.type = TokenType::EQUAL_EQUAL;
+      token.line = line;
+      BufferPtr += 2;
+    } else {
+      token.type = TokenType::EQUALS;
+      token.line = line;
+      BufferPtr++;
+    }
     return;
   case '(':
     token.type = TokenType::LEFT_PAREN;
@@ -122,6 +128,72 @@ void Lexer::next(Token &token) {
     token.line = line;
     BufferPtr++;
     return;
+  case '&':
+    if(*(BufferPtr + 1) == '&'){
+      token.type = TokenType::LOGICAL_AND;
+      token.line = line;
+      BufferPtr += 2;
+    }else{
+      token.type = TokenType::BITWISE_AND;
+      token.line = line;
+      BufferPtr++;
+    }
+    return;
+  case '|':
+  if(*(BufferPtr + 1) == '|'){
+    token.type = TokenType::LOGICAL_OR;
+    token.line = line;
+    BufferPtr += 2;
+  }else{
+    token.type = TokenType::BITWISE_OR;
+    token.line = line;
+    BufferPtr++;
+  }
+  return;
+  case '!':
+   if(*(BufferPtr + 1) == '='){
+    token.type = TokenType::NOT_EQUAL;
+    token.line = line;
+    BufferPtr += 2;
+  }else{
+    token.type = TokenType::LOGICAL_NOT;
+    token.line = line;
+    BufferPtr++;
+  }
+  case '^':
+    token.type = TokenType::BITWISE_XOR;
+    token.line = line;
+    BufferPtr++;
+    return;
+  case '<':
+  if(*(BufferPtr + 1) == '<'){
+    token.type = TokenType::LEFT_SHIFT;
+    token.line = line;
+    BufferPtr += 2;
+  }else if(*(BufferPtr + 1) == '='){
+    token.type = TokenType::LESS_THAN_EQUAL;
+    token.line = line;
+    BufferPtr += 2;
+  }else{ 
+    token.type = TokenType::LESS_THAN;
+    token.line = line;
+    BufferPtr++;
+  }
+  return;
+  case '>':
+  if(*(BufferPtr + 1) == '>'){
+    token.type = TokenType::RIGHT_SHIFT;
+    token.line = line;
+    BufferPtr += 2;
+  }else if(*(BufferPtr + 1) == '='){
+    token.type = TokenType::GREATER_THAN_EQUAL;
+    token.line = line;
+    BufferPtr += 2;
+  }else{
+    token.type = TokenType::GREATER_THAN;
+    token.line = line;
+    BufferPtr++;
+  }
   default:
     token.type = TokenType::UNKNOWN;
     break;

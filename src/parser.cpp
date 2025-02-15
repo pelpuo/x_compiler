@@ -34,6 +34,70 @@ bool Parser::consume(TokenType type)
   return true;
 }
 
+int Parser::getPrecedence(TokenType op){
+    switch(op){
+      case TokenType::LOGICAL_NOT:
+        return 2;
+      case TokenType::MUL:
+      case TokenType::DIV:
+      case TokenType::MOD:
+        return 3;
+      case TokenType::PLUS:
+      case TokenType::MINUS:
+        return 4;
+      case TokenType::LEFT_SHIFT:
+      case TokenType::RIGHT_SHIFT:
+        return 5;
+      case TokenType::LESS_THAN:
+      case TokenType::LESS_THAN_EQUAL:
+      case TokenType::GREATER_THAN:
+      case TokenType::GREATER_THAN_EQUAL:
+        return 6;
+      case TokenType::EQUAL_EQUAL:
+      case TokenType::NOT_EQUAL:
+        return 7;
+      case TokenType::BITWISE_AND:
+        return 8;
+      case TokenType::BITWISE_XOR:
+        return 9;
+      case TokenType::BITWISE_OR:
+        return 10;
+      case TokenType::LOGICAL_AND:
+        return 11;
+      case TokenType::LOGICAL_OR:
+        return 12;
+      default:
+        return 0;
+    }
+}
+
+bool Parser::isBinaryOp(TokenType type){
+  switch(type){
+    case TokenType::PLUS:
+    case TokenType::MINUS:
+    case TokenType::MUL:
+    case TokenType::DIV:
+    case TokenType::MOD:
+    case TokenType::BITWISE_AND:
+    case TokenType::BITWISE_OR:
+    case TokenType::BITWISE_XOR:
+    case TokenType::LOGICAL_AND:
+    case TokenType::LOGICAL_OR:
+    case TokenType::LOGICAL_NOT:
+    case TokenType::LEFT_SHIFT:
+    case TokenType::RIGHT_SHIFT:
+    case TokenType::EQUAL_EQUAL:
+    case TokenType::NOT_EQUAL:
+    case TokenType::LESS_THAN:
+    case TokenType::LESS_THAN_EQUAL:
+    case TokenType::GREATER_THAN:
+    case TokenType::GREATER_THAN_EQUAL:
+      return true;
+    default:
+      return false;
+  }
+}
+
 ASTProgram *Parser::parse()
 {
   ASTProgram *Res = parseProgram();
@@ -91,15 +155,11 @@ Stmt *Parser::parseStatement()
   return nullptr;
 }
 
-Expr *Parser::parseExpr()
+Expr *Parser::parseExpr(int minPrec)
 {
   Expr *left = parseFactor();
 
-  while (token.type == TokenType::PLUS 
-    || token.type == TokenType::MINUS
-    || token.type == TokenType::MUL
-    || token.type == TokenType::MOD
-    || token.type == TokenType::DIV)
+  while (isBinaryOp(token.type) && getPrecedence(token.type) >= minPrec)
   {
     TokenType op = token.type;
     advance();
