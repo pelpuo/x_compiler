@@ -71,7 +71,7 @@ class TACtoASM{
                     // Division
                     outfile << "    rem " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg1) << ", " << mapToRegister(tac.arg2) << "\n";
                 }
-                else if (tac.op == "mv") {
+                else if (tac.op == "move") {
                     // Move value
                     outfile << "    mv " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg1) << "\n";
                 }
@@ -79,9 +79,29 @@ class TACtoASM{
                     // Move value
                     outfile << "    not " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg1) << "\n";
                 }
+                else if (tac.op == "seq") {
+                    // Move value
+                    outfile << "    seqz " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg1) << "\n";
+                }
                 else if (tac.op == "NEG") {
                     // Move value
                     outfile << "    neg " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg1) << "\n";
+                }
+                else if (tac.op == "beq") {
+                    // Move value
+                    outfile << "    beq " << mapToRegister(tac.arg1) << ", " << mapToRegister(tac.arg2) << ", " << mapToRegister(tac.result) << "\n";
+                }
+                else if (tac.op == "bne") {
+                    // Move value
+                    outfile << "    bne " << mapToRegister(tac.arg1) << ", " << mapToRegister(tac.arg2) << ", " << mapToRegister(tac.result) << "\n";
+                }
+                else if (tac.op == "jmp") {
+                    // Move value
+                    outfile << "    j " << mapToRegister(tac.result) << "\n";
+                }
+                else if (tac.op == "label") {
+                    // Move value
+                    outfile << tac.arg1 << ":\n";
                 }
                 else if (tac.op == "RETURN") {
                     // Return

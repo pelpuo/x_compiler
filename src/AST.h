@@ -106,6 +106,46 @@ public:
         auto leftCode = left->generateTAC(leftTemp);
         code.insert(code.end(), leftCode.begin(), leftCode.end());
 
+        if (op == TokenType::LOGICAL_AND || op == TokenType::LOGICAL_OR) {
+          // Create labels
+          std::string falseLabel = "L" + std::to_string(AST::tempVarCounter++);
+          std::string trueLabel = "L" + std::to_string(AST::tempVarCounter++);
+          std::string endLabel = "L" + std::to_string(AST::tempVarCounter++);
+          
+          // Create result temporary variable
+          tempVar = "t" + std::to_string(AST::tempVarCounter++);
+  
+          if (op == TokenType::LOGICAL_AND) {
+              // if left is false, jump to falseLabel
+              code.push_back(TAC("beq", leftTemp, "0", falseLabel));
+          } else { // LOGICAL_OR
+              // if left is true, jump to trueLabel
+              code.push_back(TAC("bne", leftTemp, "0", trueLabel));
+          }
+  
+          // Generate TAC for right operand
+          auto rightCode = right->generateTAC(rightTemp);
+          code.insert(code.end(), rightCode.begin(), rightCode.end());
+  
+          // Assign result of right operand to tempVar
+          code.push_back(TAC("move", rightTemp, "", tempVar));
+          code.push_back(TAC("jmp", "", "", endLabel));
+  
+          // False label: result is 0
+          code.push_back(TAC("label", falseLabel, "", ""));
+          code.push_back(TAC("li", "0", "", tempVar));
+          code.push_back(TAC("jmp", "", "", endLabel));
+  
+          // True label: result is 1
+          code.push_back(TAC("label", trueLabel, "", ""));
+          code.push_back(TAC("li", "1", "", tempVar));
+  
+          // End label
+          code.push_back(TAC("label", endLabel, "", ""));
+  
+          return code;
+      }
+
         // Generate TAC for right operand
         auto rightCode = right->generateTAC(rightTemp);
         code.insert(code.end(), rightCode.begin(), rightCode.end());
@@ -177,7 +217,11 @@ public:
     std::string opStr;
     if (op == TokenType::MINUS) opStr = "NEG";
     else if (op == TokenType::COMPLEMENT) opStr = "~";
-
+    else if (op == TokenType::LOGICAL_NOT) {
+      opStr = "seq";  // Set equal to zero
+      code.push_back(TAC(opStr, exprTemp, "0", tempVar));
+      return code;
+  }
     // Emit TAC for unary operation
     code.push_back(TAC(opStr, exprTemp, "", tempVar));
 
@@ -229,6 +273,7 @@ public:
     expr->print();
   }
   StmtType getType() const override { return StmtType::EXPR; }
+  
 };
 
 //////////////////////////////////////////////////////////////////////////

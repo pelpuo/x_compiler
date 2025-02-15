@@ -7,13 +7,22 @@ main:
     addi s0, sp, 64
     li t0, 1
     li t1, 2
-    sub t2, t0, t1
-    li t3, 3
-    mul t4, t2, t3
-    li t5, 4
-    li t6, 5
-    div t7, t4, t8
-    mv a0, t7
+    li t2, 3
+    mul t3, t1, t2
+    li t4, 4
+    beq t4, t5, t6
+    li t7, 5
+    mv t8, t7
+    j t9
+L5:
+    li t8, 0
+    j t9
+L6:
+    li t8, 1
+L7:
+    div t10, t3, t8
+    sub t11, t0, t10
+    mv a0, t11
     ld ra, 56(sp)
     ld s0, 48(sp)
     addi sp, sp, 64

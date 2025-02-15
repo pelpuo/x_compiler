@@ -37,35 +37,35 @@ bool Parser::consume(TokenType type)
 int Parser::getPrecedence(TokenType op){
     switch(op){
       case TokenType::LOGICAL_NOT:
-        return 2;
+        return 14;
       case TokenType::MUL:
       case TokenType::DIV:
       case TokenType::MOD:
-        return 3;
+        return 13;
       case TokenType::PLUS:
       case TokenType::MINUS:
-        return 4;
+        return 12;
       case TokenType::LEFT_SHIFT:
       case TokenType::RIGHT_SHIFT:
-        return 5;
+        return 11;
       case TokenType::LESS_THAN:
       case TokenType::LESS_THAN_EQUAL:
       case TokenType::GREATER_THAN:
       case TokenType::GREATER_THAN_EQUAL:
-        return 6;
+        return 10;
       case TokenType::EQUAL_EQUAL:
       case TokenType::NOT_EQUAL:
-        return 7;
+        return 9;
       case TokenType::BITWISE_AND:
         return 8;
       case TokenType::BITWISE_XOR:
-        return 9;
+        return 7;
       case TokenType::BITWISE_OR:
-        return 10;
+        return 6;
       case TokenType::LOGICAL_AND:
-        return 11;
+        return 5;
       case TokenType::LOGICAL_OR:
-        return 12;
+        return 4;
       default:
         return 0;
     }
@@ -162,8 +162,10 @@ Expr *Parser::parseExpr(int minPrec)
   while (isBinaryOp(token.type) && getPrecedence(token.type) >= minPrec)
   {
     TokenType op = token.type;
+    int prec = getPrecedence(op);
     advance();
-    Expr *right = parseFactor();
+    // Expr *right = parseFactor();
+    Expr *right = parseExpr(prec + 1);
     left = new BinaryOp(op, std::unique_ptr<Expr>(left), std::unique_ptr<Expr>(right));
   }
 
