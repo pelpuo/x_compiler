@@ -21,7 +21,7 @@ bool Parser::expect(TokenType type)
 
 void Parser::error()
 {
-  cout << "Unexpected: " << TokenStr[token.type] << " " << token.value.value_or("") << " on line " << token.line << "\n";
+  cout << "(Parser) Unexpected: " << TokenStr[token.type] << " " << token.value.value_or("") << " on line " << token.line << "\n";
   HasError = true;
   exit(1);
 }
@@ -66,6 +66,8 @@ int Parser::getPrecedence(TokenType op){
         return 5;
       case TokenType::LOGICAL_OR:
         return 4;
+      case TokenType::EQUALS:
+        return 2;
       default:
         return 0;
     }
@@ -86,6 +88,7 @@ bool Parser::isBinaryOp(TokenType type){
     case TokenType::LOGICAL_NOT:
     case TokenType::LEFT_SHIFT:
     case TokenType::RIGHT_SHIFT:
+    case TokenType::EQUALS:
     case TokenType::EQUAL_EQUAL:
     case TokenType::NOT_EQUAL:
     case TokenType::LESS_THAN:
@@ -120,9 +123,9 @@ ASTProgram *Parser::parseProgram()
   return program;
 }
 
-Func *Parser::parseFunction()
-{
-  std::vector<std::unique_ptr<Stmt>> stmts;
+Func *Parser::parseFunction(){
+  // std::unique_ptr<Block> stmts;
+  std::unique_ptr<Block> stmts = std::make_unique<Block>();
 
   consume(TokenType::INT);
   expect(TokenType::ID);
@@ -136,21 +139,61 @@ Func *Parser::parseFunction()
   consume(TokenType::RIGHT_PAREN);
 
   consume(TokenType::LEFT_BRACE);
-  Stmt *stmt = parseStatement();
-  stmts.push_back(std::unique_ptr<Stmt>(stmt));
-  consume(TokenType::SEMICOLON);
+  BlockItem *nextItem;
+  while (token.type != TokenType::RIGHT_BRACE) {
+    nextItem = parseBlockItem();
+    if(nextItem == nullptr)break;
+    stmts->addItem(std::unique_ptr<BlockItem>(nextItem));
+  }
+  // stmts->addItem(std::unique_ptr<Stmt>(stmt));
+  // consume(TokenType::SEMICOLON);
   consume(TokenType::RIGHT_BRACE);
-
+  
   return new Func(name, std::move(stmts));
 }
 
-Stmt *Parser::parseStatement()
-{
-  if (consume(TokenType::RETURN))
-  {
+
+BlockItem *Parser::parseBlockItem() {
+  // Check if the next token is a type specifier (indicating a declaration)
+  if (token.type == TokenType::INT) {
+    return parseDeclaration();
+  } else {
+    return parseStatement();
+  }
+}
+
+
+Decl *Parser::parseDeclaration() {
+  consume(TokenType::INT); // Consume 'int' keyword
+  expect(TokenType::ID);
+  
+  std::string varName = token.value.value();
+  consume(TokenType::ID);
+  
+  std::unique_ptr<Expr> initializer = nullptr;
+  
+  // Check for optional initialization (e.g., int x = 10;)
+  if (token.type == TokenType::EQUALS) {
+    consume(TokenType::EQUALS);
+    initializer.reset(parseExpr());
+  }
+  
+  consume(TokenType::SEMICOLON); // Expect a semicolon at the end
+  return new Decl(varName, std::move(initializer));
+}
+
+Stmt *Parser::parseStatement(){
+  if (token.type == TokenType::RETURN) {
+    consume(TokenType::RETURN);
     Expr *expr = parseExpr();
     std::unique_ptr<Expr> retPtr(expr);
+    consume(TokenType::SEMICOLON);
     return new ReturnStmt(std::move(retPtr));
+  }
+  else if(token.type == TokenType::ID){
+    Expr *expr = parseExpr();
+    consume(TokenType::SEMICOLON);
+    return new ExprStmt(std::unique_ptr<Expr>(expr));
   }
   return nullptr;
 }
@@ -176,9 +219,15 @@ Expr *Parser::parseExpr(int minPrec)
     TokenType op = token.type;
     int prec = getPrecedence(op);
     advance();
-    // Expr *right = parseFactor();
-    Expr *right = parseExpr(prec + 1);
-    left = new BinaryOp(op, std::unique_ptr<Expr>(left), std::unique_ptr<Expr>(right));
+    
+    if(op == TokenType::EQUALS){
+      Expr *right = parseExpr(prec);
+      left = new Assignment(std::unique_ptr<Expr>(left), std::unique_ptr<Expr>(right));
+    }else{
+      Expr *right = parseExpr(prec + 1);
+      left = new BinaryOp(op, std::unique_ptr<Expr>(left), std::unique_ptr<Expr>(right));
+    }
+  
   }
 
   return left;
@@ -189,25 +238,23 @@ Expr *Parser::parseTerm()
     return nullptr;
 }
 
-Expr *Parser::parseFactor()
-{
+Expr *Parser::parseFactor(){
   if(token.type == TokenType::NUM){
     string tokentext = token.value.value();
     consume(TokenType::NUM);
     return new IntLiteral(stoi(tokentext));
   }
-  // else if(token.type == TokenType::COMPLEMENT || token.type == TokenType::MINUS || token.type == TokenType::LOGICAL_NOT){
-  //   TokenType op = token.type;
-  //   advance();
-  //   Expr *expr = parseExpr();
-  //   return new UnaryOp(op, std::unique_ptr<Expr>(expr));
-  // }
   else if(token.type == TokenType::LEFT_PAREN){
     consume(TokenType::LEFT_PAREN);
     Expr *expr = parseExpr();
     consume(TokenType::RIGHT_PAREN);
     return expr;
-  }else{
+  }else if(token.type == TokenType::ID){
+    string name = token.value.value();
+    consume(TokenType::ID);
+    return new Variable(name);
+  }
+  else{
     error();
   }
 

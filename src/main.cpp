@@ -38,6 +38,8 @@ int main(int argc, char ** argv){
     Parser parser(lexer);
     ASTProgram *prog = parser.parse();
     // prog->print();
+    SymbolTable symTab;
+    prog->resolveSymbol(symTab);
     string tempVar;
     std::vector<TAC> tacCode = prog->generateTAC(tempVar);
     

@@ -2,6 +2,7 @@
 
 #include "lexer.h"
 #include "TAC.h"
+#include "SymbolTable.h"
 #include <iostream>
 #include <memory>
 #include <string>
@@ -15,7 +16,7 @@ class WithDecl;
 
 using namespace std;
 
-enum class StmtType { ASSIGN, EXPR, RETURN };
+enum class StmtType { EXPR, RETURN, NULL_STMT };
 
 class ASTVisitor {
 public:
@@ -34,6 +35,7 @@ public:
   static int tempVarCounter; // Counter for temporary variables
   virtual ~AST() = default;
   virtual std::vector<TAC> generateTAC(std::string &tempVar) = 0;
+  virtual void resolveSymbol(SymbolTable &symTab) {}
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -43,6 +45,50 @@ class Expr : public AST {
 public:
   virtual ~Expr() = default;
   virtual void print() = 0;
+};
+
+//////////////////////////////////////////////////////////////////////////
+
+// Defining Block Items (eg Statements, Declarations)
+class BlockItem : public AST {
+  public:
+    virtual ~BlockItem() = default;
+    virtual void print() = 0;
+    virtual std::vector<TAC> generateTAC(std::string &tempVar) = 0;
+};
+  
+
+
+class Block : public AST {
+  public:
+  std::vector<std::unique_ptr<BlockItem>> items;
+
+  void addItem(std::unique_ptr<BlockItem> item) {
+    items.push_back(std::move(item));
+  }
+
+  void print() {
+    for (auto &item : items) {
+      item->print();
+    }
+  }
+
+  std::vector<TAC> generateTAC(std::string &tempVar) override {
+    std::vector<TAC> code;
+    for (auto &item : items) {
+      std::string tempVar;
+      auto itemCode = item->generateTAC(tempVar);
+      code.insert(code.end(), itemCode.begin(), itemCode.end());
+    }
+    return code;
+  }
+
+  void resolveSymbol(SymbolTable &symTab) override {
+    for (auto &item : items) {
+      item->resolveSymbol(symTab);
+    }
+  }
+
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -60,6 +106,8 @@ public:
       code.push_back(TAC("li", std::to_string(value), "", tempVar));
       return code;
   }
+
+  void resolveSymbol(SymbolTable &symTab) override {}
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -77,6 +125,13 @@ public:
       code.push_back(TAC("load", name, "", tempVar));
       return code;
     }
+
+  void resolveSymbol(SymbolTable &symTab) override {
+    if (!symTab.resolve(name)) {
+      std::cerr << "ERROR: Undeclared variable '" << name << "'" << std::endl;
+      exit(1);
+    }
+  }
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -187,6 +242,11 @@ public:
 
         return code;
     }
+
+    void resolveSymbol(SymbolTable &symTab) override {
+      left->resolveSymbol(symTab);
+      right->resolveSymbol(symTab);
+    }
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -197,10 +257,11 @@ public:
   std::unique_ptr<Expr> expr;
   UnaryOp(TokenType op, std::unique_ptr<Expr> expr)
       : op(op), expr(std::move(expr)) {}
-    void print(){
-        cout << "UnaryOp: " << TokenStr[(int)op] << " ";
-        expr->print();
-    }
+
+  void print(){
+    cout << "UnaryOp: " << TokenStr[(int)op] << " ";
+    expr->print();
+  }
 
   std::vector<TAC> generateTAC(std::string &tempVar) override {
     std::vector<TAC> code;
@@ -227,36 +288,107 @@ public:
 
     return code;
   }
+
+  void resolveSymbol(SymbolTable &symTab) override {
+    expr->resolveSymbol(symTab);
+  }
 };
 // Initialize static member
 
 //////////////////////////////////////////////////////////////////////////
 
+// Variable assignment (e.g., `x = 5;`)
+class Assignment : public Expr {
+  public:
+  std::unique_ptr<Expr> name;
+  std::unique_ptr<Expr> value;
+  
+  Assignment(std::unique_ptr<Expr> name, std::unique_ptr<Expr> value)
+  : name(std::move(name)), value(std::move(value)) {}
+  
+  void print() {
+    cout << "AssignStmt: "; 
+    name->print();
+    cout << " = ";
+    value->print();
+  }
+
+  std::vector<TAC> generateTAC(std::string &tempVar) override {
+    std::vector<TAC> code;
+    std::string nameTemp, valueTemp;
+    
+    // Generate TAC for the name
+    auto nameCode = name->generateTAC(nameTemp);
+    code.insert(code.end(), nameCode.begin(), nameCode.end());
+    
+    // Generate TAC for the value
+    auto valueCode = value->generateTAC(valueTemp);
+    code.insert(code.end(), valueCode.begin(), valueCode.end());
+    
+    // Emit TAC for assignment
+    code.push_back(TAC("store", valueTemp, "", nameTemp));
+    return code;
+  }
+
+  void resolveSymbol(SymbolTable &symTab) override {
+    name->resolveSymbol(symTab);
+    value->resolveSymbol(symTab);
+  }
+};
+
+
+//////////////////////////////////////////////////////////////////////////
+
+class Decl : public BlockItem {
+  public:
+    std::string name;
+    std::unique_ptr<Expr> initializer;  // Optional initializer
+  
+    Decl(std::string name, std::unique_ptr<Expr> initializer = nullptr)
+        : name(std::move(name)), initializer(std::move(initializer)) {}
+  
+    void print() override {
+      cout << "Declaration: " << name;
+      if (initializer) {
+        cout << " = ";
+        initializer->print();
+      }
+      cout << endl;
+    }
+  
+    std::vector<TAC> generateTAC(std::string &tempVar) override {
+      std::vector<TAC> code;
+      tempVar = name;  // Variable name acts as the destination
+  
+      if (initializer) {
+        std::string initTemp;
+        auto initCode = initializer->generateTAC(initTemp);
+        code.insert(code.end(), initCode.begin(), initCode.end());
+        code.push_back(TAC("store", initTemp, "", tempVar));
+      }
+      return code;
+    }
+
+    void resolveSymbol(SymbolTable &symTab) override {
+      if (!symTab.declare(name)) {
+        std::cerr << "ERROR: Redeclaration of variable '" << name << "'" << std::endl;
+        exit(1);
+      }
+      if (initializer) {
+        initializer->resolveSymbol(symTab);
+      }
+    }
+};  
+
+//////////////////////////////////////////////////////////////////////////
+
 // Defining Statement
-class Stmt : public AST {
+class Stmt : public BlockItem {
 public:
   virtual ~Stmt() = default;
   virtual void print() = 0;
   virtual StmtType getType() const = 0;
   virtual std::vector<TAC> generateTAC(std::string &tempVar) = 0;
-};
-
-//////////////////////////////////////////////////////////////////////////
-
-// Variable assignment (e.g., `x = 5;`)
-class AssignStmt : public Stmt {
-public:
-  std::string name;
-  std::unique_ptr<Expr> value;
-
-  AssignStmt(std::string name, std::unique_ptr<Expr> value)
-      : name(std::move(name)), value(std::move(value)) {}
-
-  void print() {
-    cout << "AssignStmt: " << name << " = ";
-    value->print();
-  }
-  StmtType getType() const override { return StmtType::ASSIGN; }
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -273,6 +405,22 @@ public:
     expr->print();
   }
   StmtType getType() const override { return StmtType::EXPR; }
+
+  std::vector<TAC> generateTAC(std::string &tempvar) override{
+      std::vector<TAC> code;
+      std::string tempVar;
+      
+      // Generate TAC for the expression
+      auto exprCode = expr->generateTAC(tempVar);
+      code.insert(code.end(), exprCode.begin(), exprCode.end());
+
+      code.push_back(TAC("EXPR", tempVar, "", ""));
+      return code;
+  }
+
+  void resolveSymbol(SymbolTable &symTab) override {
+    expr->resolveSymbol(symTab);
+  }
   
 };
 
@@ -302,33 +450,82 @@ public:
       code.push_back(TAC("RETURN", tempVar, "", ""));
       return code;
   }
+
+  void resolveSymbol(SymbolTable &symTab) override {
+    expr->resolveSymbol(symTab);
+  }
+
+};
+
+class NullStmt : public Stmt {
+public:
+  void print() { cout << "NullStmt" << endl; }
+  StmtType getType() const override { return StmtType::NULL_STMT; }
+
+  void resolveSymbol(SymbolTable &symTab) override {}
 };
 
 //////////////////////////////////////////////////////////////////////////
 
+// class Func : public AST {
+// public:
+//   std::string name;
+//   std::vector<std::unique_ptr<Block>> body;
+//   // std::unique_ptr<Stmt> body;
+
+//   // Func(std::string name, std::unique_ptr<Stmt> body)
+//   // : name(std::move(name)), body(std::move(body)) {}
+
+//   Func(std::string name, std::vector<std::unique_ptr<Block>> body)
+//       : name(std::move(name)), body(std::move(body)) {}
+  
+//   void print() {
+//     cout << "Function: " << name << endl;
+//     cout << "Body: " << endl;
+//     body->print();
+//   }
+
+//  std::vector<TAC> generateTAC(std::string &tempVar) override{
+//       std::vector<TAC> code;
+//       // std::cout << "Function " << name << ":\n";
+//       for (auto &stmt : body) {
+//           std::string tempVar;
+//           auto stmtCode = stmt->generateTAC(tempVar);
+//           code.insert(code.end(), stmtCode.begin(), stmtCode.end());
+//       }
+//       return code;
+//   }
+// };
+
 class Func : public AST {
-public:
-  std::string name;
-  std::vector<std::unique_ptr<Stmt>> body;
-  // std::unique_ptr<Stmt> body;
-
-  // Func(std::string name, std::unique_ptr<Stmt> body)
-  // : name(std::move(name)), body(std::move(body)) {}
-
-  Func(std::string name, std::vector<std::unique_ptr<Stmt>> body)
-      : name(std::move(name)), body(std::move(body)) {}
-
- std::vector<TAC> generateTAC(std::string &tempVar) override{
+  public:
+    std::string name;
+    std::unique_ptr<Block> body;
+  
+    Func(std::string name, std::unique_ptr<Block> body)
+        : name(std::move(name)), body(std::move(body)) {}
+  
+    void print() {
+      cout << "Function: " << name << endl;
+      cout << "Body: " << endl;
+      body->print();
+    }
+  
+    std::vector<TAC> generateTAC(std::string &tempVar) override {
       std::vector<TAC> code;
-      // std::cout << "Function " << name << ":\n";
-      for (auto &stmt : body) {
-          std::string tempVar;
-          auto stmtCode = stmt->generateTAC(tempVar);
-          code.insert(code.end(), stmtCode.begin(), stmtCode.end());
-      }
+      auto bodyCode = body->generateTAC(tempVar);
+      code.insert(code.end(), bodyCode.begin(), bodyCode.end());
       return code;
-  }
-};
+    }
+
+    void resolveSymbol(SymbolTable &symTab) override {
+      symTab.enterScope();
+      body->resolveSymbol(symTab);
+      symTab.exitScope();
+    }
+
+  };
+  
 
 class ASTProgram : public AST {
 public:
@@ -340,15 +537,7 @@ public:
 
   void print() {
     for (auto &func : functions) {
-      cout << "Function: " << func->name << endl;
-      // for(auto &stmt : func->body){
-      //     cout << "Statement: " << stmt->name << endl;
-      // }
-      // func.body->print();
-      cout << "Body: ";
-      for (auto &stmt : func->body) {
-        stmt->print();
-      }
+      func->print();
     }
   }
 
@@ -360,5 +549,11 @@ public:
       code.insert(code.end(), funcCode.begin(), funcCode.end());
     }
     return code;
+  }
+
+  void resolveSymbol(SymbolTable &symTab) override {
+    for (auto &func : functions) {
+      func->resolveSymbol(symTab);
+    }
   }
 };

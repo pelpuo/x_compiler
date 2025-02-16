@@ -21,9 +21,11 @@ class Parser{
         ASTProgram *parseProgram();
         Func *parseFunction();
         Stmt *parseStatement();
+        BlockItem *parseBlockItem();
         Expr *parseExpr(int minPrec = 0);
         Expr *parseTerm();
         Expr *parseFactor();
+        Decl *parseDeclaration();
         
     public:
         Parser(Lexer &lex);

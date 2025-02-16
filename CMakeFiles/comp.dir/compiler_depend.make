@@ -219,7 +219,14 @@ CMakeFiles/comp.dir/src/AST.cpp.o: src/AST.cpp \
   /usr/include/c++/11/bits/codecvt.h \
   /usr/include/x86_64-linux-gnu/c++/11/bits/basic_file.h \
   /usr/include/x86_64-linux-gnu/c++/11/bits/c++io.h \
-  /usr/include/c++/11/bits/fstream.tcc
+  /usr/include/c++/11/bits/fstream.tcc \
+  src/SymbolTable.h \
+  /usr/include/c++/11/unordered_map \
+  /usr/include/c++/11/bits/hashtable.h \
+  /usr/include/c++/11/bits/hashtable_policy.h \
+  /usr/include/c++/11/bits/node_handle.h \
+  /usr/include/c++/11/bits/unordered_map.h \
+  /usr/include/c++/11/bits/erase_if.h
 
 CMakeFiles/comp.dir/src/codeGen.cpp.o: src/codeGen.cpp \
   /usr/include/stdc-predef.h \
@@ -440,7 +447,14 @@ CMakeFiles/comp.dir/src/codeGen.cpp.o: src/codeGen.cpp \
   src/lexer.h \
   /usr/include/c++/11/optional \
   /usr/include/c++/11/bits/enable_special_members.h \
-  src/TAC.h
+  src/TAC.h \
+  src/SymbolTable.h \
+  /usr/include/c++/11/unordered_map \
+  /usr/include/c++/11/bits/hashtable.h \
+  /usr/include/c++/11/bits/hashtable_policy.h \
+  /usr/include/c++/11/bits/node_handle.h \
+  /usr/include/c++/11/bits/unordered_map.h \
+  /usr/include/c++/11/bits/erase_if.h
 
 CMakeFiles/comp.dir/src/lexer.cpp.o: src/lexer.cpp \
   /usr/include/stdc-predef.h \
@@ -855,14 +869,19 @@ CMakeFiles/comp.dir/src/main.cpp.o: src/main.cpp \
   /usr/include/c++/11/backward/auto_ptr.h \
   /usr/include/c++/11/pstl/glue_memory_defs.h \
   /usr/include/c++/11/pstl/execution_defs.h \
+  src/SymbolTable.h \
+  /usr/include/c++/11/unordered_map \
+  /usr/include/c++/11/bits/hashtable.h \
+  /usr/include/c++/11/bits/hashtable_policy.h \
+  /usr/include/c++/11/bits/node_handle.h \
+  /usr/include/c++/11/bits/unordered_map.h \
+  /usr/include/c++/11/bits/erase_if.h \
   src/codeGen.h \
   src/TAC_to_ASM.h \
   /usr/include/c++/11/map \
   /usr/include/c++/11/bits/stl_tree.h \
-  /usr/include/c++/11/bits/node_handle.h \
   /usr/include/c++/11/bits/stl_map.h \
-  /usr/include/c++/11/bits/stl_multimap.h \
-  /usr/include/c++/11/bits/erase_if.h
+  /usr/include/c++/11/bits/stl_multimap.h
 
 CMakeFiles/comp.dir/src/parser.cpp.o: src/parser.cpp \
   /usr/include/stdc-predef.h \
@@ -1083,12 +1102,17 @@ CMakeFiles/comp.dir/src/parser.cpp.o: src/parser.cpp \
   /usr/include/c++/11/bits/codecvt.h \
   /usr/include/x86_64-linux-gnu/c++/11/bits/basic_file.h \
   /usr/include/x86_64-linux-gnu/c++/11/bits/c++io.h \
-  /usr/include/c++/11/bits/fstream.tcc
+  /usr/include/c++/11/bits/fstream.tcc \
+  src/SymbolTable.h \
+  /usr/include/c++/11/unordered_map \
+  /usr/include/c++/11/bits/hashtable.h \
+  /usr/include/c++/11/bits/hashtable_policy.h \
+  /usr/include/c++/11/bits/node_handle.h \
+  /usr/include/c++/11/bits/unordered_map.h \
+  /usr/include/c++/11/bits/erase_if.h
 
 
 src/parser.cpp:
-
-/usr/include/c++/11/bits/erase_if.h:
 
 /usr/include/c++/11/bits/stl_map.h:
 
@@ -1097,6 +1121,12 @@ src/parser.h:
 /usr/include/c++/11/sstream:
 
 src/codeGen.h:
+
+/usr/include/c++/11/bits/erase_if.h:
+
+/usr/include/c++/11/bits/hashtable_policy.h:
+
+/usr/include/c++/11/bits/hashtable.h:
 
 /usr/include/c++/11/bits/fstream.tcc:
 
@@ -1266,11 +1296,15 @@ src/AST.cpp:
 
 /usr/include/x86_64-linux-gnu/bits/sched.h:
 
+/usr/include/c++/11/bits/unordered_map.h:
+
 /usr/include/x86_64-linux-gnu/bits/types/struct_sched_param.h:
 
 /usr/include/c++/11/bits/stl_iterator_base_funcs.h:
 
 /usr/include/ctype.h:
+
+src/SymbolTable.h:
 
 /usr/include/c++/11/ios:
 
@@ -1451,6 +1485,8 @@ src/lexer.cpp:
 /usr/include/x86_64-linux-gnu/bits/types.h:
 
 /usr/include/x86_64-linux-gnu/bits/stdint-intn.h:
+
+/usr/include/c++/11/unordered_map:
 
 /usr/include/c++/11/cctype:
 

@@ -30,9 +30,9 @@ void CodeGenerator::generateFunction(Func *func) {
             << "sd s0, 0(sp)" << endl
             << "addi s0, sp, 16" << endl;
 
-    for(auto &stmt: func->body){
-        generateStatement(stmt.get());
-    }
+    // for(auto &stmt: func->body->items){
+    //     generateStatement(stmt.get());
+    // }
 
     // Epilogue
     outfile  << "ld ra, 8(sp)" << endl
@@ -51,8 +51,6 @@ void CodeGenerator::generateFunction(Func *func) {
 
 void CodeGenerator::generateStatement(Stmt *stmt) {
     switch(stmt->getType()){
-        case StmtType::ASSIGN:
-        break; 
         case StmtType::EXPR:
         break; 
         case StmtType::RETURN:
