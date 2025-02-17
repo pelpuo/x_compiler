@@ -30,7 +30,11 @@ void Lexer::next(Token &token) {
       token.type = TokenType::INT;
     } else if (value == "void") {
       token.type = TokenType::VOID;
-    } else {
+    }else if(value == "if"){
+      token.type = TokenType::IF;
+    }else if(value == "else"){
+      token.type = TokenType::ELSE;
+    }else {
       token.type = TokenType::ID;
       token.value = value;
     }
@@ -57,9 +61,15 @@ void Lexer::next(Token &token) {
   // Tokenizing Symbols
   switch (*BufferPtr) {
   case '+':
-    token.type = TokenType::PLUS;
-    token.line = line;
-    BufferPtr++;
+    if(*(BufferPtr + 1) == '='){
+      token.type = TokenType::PLUS_EQUAL;
+      token.line = line;
+      BufferPtr += 2;
+    }else{
+      token.type = TokenType::PLUS;
+      token.line = line;
+      BufferPtr++;
+    }
     return;
   case '~':
     token.type = TokenType::COMPLEMENT;
@@ -71,21 +81,37 @@ void Lexer::next(Token &token) {
       token.type = TokenType::DECREMENT;
       token.line = line;
       BufferPtr += 2;
-    } else {
+    }else if(*(BufferPtr + 1) == '='){
+      token.type = TokenType::MINUS_EQUAL;
+      token.line = line;
+      BufferPtr += 2;
+    }else {
       token.type = TokenType::MINUS;
       token.line = line;
       BufferPtr++;
     }
     return;
   case '*':
-    token.type = TokenType::MUL;
-    token.line = line;
-    BufferPtr++;
+    if (*(BufferPtr + 1) == '=') {
+      token.type = TokenType::MUL_EQUAL;
+      token.line = line;
+      BufferPtr += 2;
+    } else {
+      token.type = TokenType::MUL;
+      token.line = line;
+      BufferPtr++;
+    }
     return;
   case '/':
-    token.type = TokenType::DIV;
-    token.line = line;
-    BufferPtr++;
+    if(*(BufferPtr + 1) == '='){
+      token.type = TokenType::DIV_EQUAL;
+      token.line = line;
+      BufferPtr += 2;
+    }else{
+      token.type = TokenType::DIV;
+      token.line = line;
+      BufferPtr++;
+    }
     return;
   case '=':
     if (*(BufferPtr + 1) == '=') {
@@ -133,6 +159,10 @@ void Lexer::next(Token &token) {
       token.type = TokenType::LOGICAL_AND;
       token.line = line;
       BufferPtr += 2;
+    }else if(*(BufferPtr + 1) == '='){
+      token.type = TokenType::AND_EQUAL;
+      token.line = line;
+      BufferPtr += 2;
     }else{
       token.type = TokenType::BITWISE_AND;
       token.line = line;
@@ -142,6 +172,10 @@ void Lexer::next(Token &token) {
   case '|':
     if(*(BufferPtr + 1) == '|'){
       token.type = TokenType::LOGICAL_OR;
+      token.line = line;
+      BufferPtr += 2;
+    }else if(*(BufferPtr + 1) == '='){
+      token.type = TokenType::OR_EQUAL;
       token.line = line;
       BufferPtr += 2;
     }else{
@@ -162,15 +196,26 @@ void Lexer::next(Token &token) {
     }
     return;
   case '^':
-    token.type = TokenType::BITWISE_XOR;
-    token.line = line;
-    BufferPtr++;
-    return;
-  case '<':
-    if(*(BufferPtr + 1) == '<'){
-      token.type = TokenType::LEFT_SHIFT;
+    if(*(BufferPtr + 1) == '='){
+      token.type = TokenType::XOR_EQUAL;
       token.line = line;
       BufferPtr += 2;
+    }else{
+      token.type = TokenType::BITWISE_XOR;
+      token.line = line;
+      BufferPtr++;
+    }
+  case '<':
+    if(*(BufferPtr + 1) == '<'){
+      if(*(BufferPtr + 2) == '='){
+        token.type = TokenType::LEFT_SHIFT_EQUAL;
+        token.line = line;
+        BufferPtr += 3;
+      }else{
+        token.type = TokenType::LEFT_SHIFT;
+        token.line = line;
+        BufferPtr += 2;
+      }
     }else if(*(BufferPtr + 1) == '='){
       token.type = TokenType::LESS_THAN_EQUAL;
       token.line = line;
@@ -183,9 +228,15 @@ void Lexer::next(Token &token) {
     return;
   case '>':
     if(*(BufferPtr + 1) == '>'){
-      token.type = TokenType::RIGHT_SHIFT;
-      token.line = line;
-      BufferPtr += 2;
+      if(*(BufferPtr + 2) == '='){
+        token.type = TokenType::RIGHT_SHIFT_EQUAL;
+        token.line = line;
+        BufferPtr += 3;
+      }else{
+        token.type = TokenType::RIGHT_SHIFT;
+        token.line = line;
+        BufferPtr += 2;
+      }
     }else if(*(BufferPtr + 1) == '='){
       token.type = TokenType::GREATER_THAN_EQUAL;
       token.line = line;
@@ -195,6 +246,16 @@ void Lexer::next(Token &token) {
       token.line = line;
       BufferPtr++;
     }
+    return;
+  case '?':
+    token.type = TokenType::QUESTION_MARK;
+    token.line = line;
+    BufferPtr++;
+    return;
+  case ':':
+    token.type = TokenType::COLON;
+    token.line = line;
+    BufferPtr++;
     return;
   default:
     token.type = TokenType::UNKNOWN;

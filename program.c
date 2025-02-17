@@ -1,6 +1,9 @@
 int main(void) {
-    int a;
-    a = 2;
-    int b = a + 1;
-    return a * 2;
+    int a = 1;
+    int b;
+    if (a >= 3)
+        return a;
+    else
+        b = 8;
+    return a + b;
  }

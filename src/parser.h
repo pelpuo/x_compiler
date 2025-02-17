@@ -17,6 +17,7 @@ class Parser{
         bool consume(TokenType type);
         int getPrecedence(TokenType op);
         bool isBinaryOp(TokenType type);
+        bool isCompoundAssignOp(TokenType type);
 
         ASTProgram *parseProgram();
         Func *parseFunction();

@@ -44,6 +44,23 @@ typedef enum{
     GREATER_THAN,
     LESS_THAN_EQUAL,
     GREATER_THAN_EQUAL,
+
+    PLUS_EQUAL,
+    MINUS_EQUAL,
+    MUL_EQUAL,
+    DIV_EQUAL,
+    MOD_EQUAL,
+
+    AND_EQUAL,
+    OR_EQUAL,
+    XOR_EQUAL,
+    LEFT_SHIFT_EQUAL,
+    RIGHT_SHIFT_EQUAL,
+
+    IF,
+    ELSE,
+    QUESTION_MARK,
+    COLON,
 }TokenType;
 
 static string TokenStr[] = {
@@ -82,6 +99,23 @@ static string TokenStr[] = {
     "GREATER_THAN",
     "LESS_THAN_EQUAL",
     "GREATER_THAN_EQUAL",
+
+    "PLUS_EQUAL",
+    "MINUS_EQUAL",
+    "MUL_EQUAL",
+    "DIV_EQUAL",
+    "MOD_EQUAL",
+
+    "AND_EQUAL",
+    "OR_EQUAL",
+    "XOR_EQUAL",
+    "LEFT_SHIFT_EQUAL",
+    "RIGHT_SHIFT_EQUAL",
+
+    "IF",
+    "ELSE",
+    "QUESTION_MARK",
+    "COLON",
 };
 
 typedef struct{

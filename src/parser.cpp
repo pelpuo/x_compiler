@@ -66,7 +66,19 @@ int Parser::getPrecedence(TokenType op){
         return 5;
       case TokenType::LOGICAL_OR:
         return 4;
+      case TokenType::QUESTION_MARK:
+        return 3;
       case TokenType::EQUALS:
+      case TokenType::PLUS_EQUAL:
+      case TokenType::MINUS_EQUAL:
+      case TokenType::MUL_EQUAL:
+      case TokenType::DIV_EQUAL:
+      case TokenType::MOD_EQUAL:
+      case TokenType::AND_EQUAL:
+      case TokenType::OR_EQUAL:
+      case TokenType::XOR_EQUAL:
+      case TokenType::LEFT_SHIFT_EQUAL:
+      case TokenType::RIGHT_SHIFT_EQUAL:
         return 2;
       default:
         return 0;
@@ -95,6 +107,35 @@ bool Parser::isBinaryOp(TokenType type){
     case TokenType::LESS_THAN_EQUAL:
     case TokenType::GREATER_THAN:
     case TokenType::GREATER_THAN_EQUAL:
+
+    case TokenType::PLUS_EQUAL:
+    case TokenType::MINUS_EQUAL:
+    case TokenType::MUL_EQUAL:
+    case TokenType::DIV_EQUAL:
+    case TokenType::MOD_EQUAL:
+    case TokenType::AND_EQUAL:
+    case TokenType::OR_EQUAL:
+    case TokenType::XOR_EQUAL:
+    case TokenType::LEFT_SHIFT_EQUAL:
+    case TokenType::RIGHT_SHIFT_EQUAL:
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool Parser::isCompoundAssignOp(TokenType type) {
+  switch (type) {
+    case TokenType::PLUS_EQUAL:
+    case TokenType::MINUS_EQUAL:
+    case TokenType::MUL_EQUAL:
+    case TokenType::DIV_EQUAL:
+    case TokenType::MOD_EQUAL:
+    case TokenType::AND_EQUAL:
+    case TokenType::OR_EQUAL:
+    case TokenType::XOR_EQUAL:
+    case TokenType::LEFT_SHIFT_EQUAL:
+    case TokenType::RIGHT_SHIFT_EQUAL:
       return true;
     default:
       return false;
@@ -148,7 +189,7 @@ Func *Parser::parseFunction(){
   // stmts->addItem(std::unique_ptr<Stmt>(stmt));
   // consume(TokenType::SEMICOLON);
   consume(TokenType::RIGHT_BRACE);
-  
+  stmts->addItem(std::unique_ptr<BlockItem>(new ReturnStmt(std::make_unique<IntLiteral>(0))));
   return new Func(name, std::move(stmts));
 }
 
@@ -194,6 +235,18 @@ Stmt *Parser::parseStatement(){
     Expr *expr = parseExpr();
     consume(TokenType::SEMICOLON);
     return new ExprStmt(std::unique_ptr<Expr>(expr));
+  }else if(token.type == TokenType::IF){
+    consume(TokenType::IF);
+    consume(TokenType::LEFT_PAREN);
+    Expr *expr = parseExpr();
+    consume(TokenType::RIGHT_PAREN);
+    Stmt *stmt = parseStatement();
+    Stmt *elseStmt = nullptr;
+    if(token.type == TokenType::ELSE){
+      consume(TokenType::ELSE);
+      elseStmt = parseStatement();
+    }
+    return new IfStmt(std::unique_ptr<Expr>(expr), std::unique_ptr<Stmt>(stmt), std::unique_ptr<Stmt>(elseStmt));
   }
   return nullptr;
 }
@@ -223,6 +276,15 @@ Expr *Parser::parseExpr(int minPrec)
     if(op == TokenType::EQUALS){
       Expr *right = parseExpr(prec);
       left = new Assignment(std::unique_ptr<Expr>(left), std::unique_ptr<Expr>(right));
+    }else if(op == TokenType::QUESTION_MARK){
+      consume(TokenType::QUESTION_MARK);
+      Expr *trueExpr = parseExpr();
+      consume(TokenType::COLON);
+      Expr *falseExpr = parseExpr();
+      left = new TernaryOp(std::unique_ptr<Expr>(left), std::unique_ptr<Expr>(trueExpr), std::unique_ptr<Expr>(falseExpr));
+    }else if(isCompoundAssignOp(op)){
+      Expr *right = parseExpr(prec);
+      left = new CompoundAssignment(op, std::unique_ptr<Expr>(left), std::unique_ptr<Expr>(right));
     }else{
       Expr *right = parseExpr(prec + 1);
       left = new BinaryOp(op, std::unique_ptr<Expr>(left), std::unique_ptr<Expr>(right));

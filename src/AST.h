@@ -16,7 +16,7 @@ class WithDecl;
 
 using namespace std;
 
-enum class StmtType { EXPR, RETURN, NULL_STMT };
+enum class StmtType { EXPR, RETURN, NULL_STMT, IF_STMT };
 
 class ASTVisitor {
 public:
@@ -112,7 +112,7 @@ public:
 
 //////////////////////////////////////////////////////////////////////////
 
-// Variable reference
+// Variable reference (e.g., `x`)
 class Variable : public Expr {
 public:
   std::string name;
@@ -336,9 +336,138 @@ class Assignment : public Expr {
   }
 };
 
+//////////////////////////////////////////////////////////////////////////
+
+// Compound assignment (e.g., `x += 5;`)
+class CompoundAssignment : public Expr {
+  public:
+    std::unique_ptr<Expr> left;
+    TokenType op;
+    std::unique_ptr<Expr> right;
+  
+    CompoundAssignment(TokenType op, std::unique_ptr<Expr> left, std::unique_ptr<Expr> right)
+        : op(op), left(std::move(left)), right(std::move(right)) {}
+  
+    void print() {
+      cout << "CompoundAssignStmt: ";
+      left->print();
+      cout << " " << TokenStr[(int)op] << " ";
+      right->print();
+    }
+  
+    std::vector<TAC> generateTAC(std::string &tempVar) override {
+      std::vector<TAC> code;
+      std::string nameTemp, valueTemp, resultTemp;
+  
+      // Generate TAC for the name
+      auto nameCode = left->generateTAC(nameTemp);
+      code.insert(code.end(), nameCode.begin(), nameCode.end());
+  
+      // Generate TAC for the value
+      auto valueCode = right->generateTAC(valueTemp);
+      code.insert(code.end(), valueCode.begin(), valueCode.end());
+  
+      // Create a new temporary variable for the result
+      resultTemp = "t" + std::to_string(tempVarCounter++);
+  
+      // Map TokenType to TAC operation
+      std::string opStr;
+      #define TOKEN_TO_STRING(token, str) \
+      case TokenType::token:          \
+        opStr = str;               \
+          break;
+  
+      switch(op){
+        TOKEN_TO_STRING(PLUS_EQUAL, "+")
+        TOKEN_TO_STRING(MINUS_EQUAL, "-")
+        TOKEN_TO_STRING(MUL_EQUAL, "*")
+        TOKEN_TO_STRING(DIV_EQUAL, "/")
+        TOKEN_TO_STRING(MOD_EQUAL, "%")
+        TOKEN_TO_STRING(AND_EQUAL, "&")
+        TOKEN_TO_STRING(OR_EQUAL, "|")
+        TOKEN_TO_STRING(XOR_EQUAL, "^")
+        TOKEN_TO_STRING(LEFT_SHIFT_EQUAL, "<<")
+        TOKEN_TO_STRING(RIGHT_SHIFT_EQUAL, ">>")
+      }
+      #undef TOKEN_TO_STRING
+  
+      // Emit TAC for compound assignment operation
+      code.push_back(TAC(opStr, nameTemp, valueTemp, resultTemp));
+      code.push_back(TAC("store", resultTemp, "", nameTemp));
+  
+      return code;
+    }
+  
+    void resolveSymbol(SymbolTable &symTab) override {
+      left->resolveSymbol(symTab);
+      right->resolveSymbol(symTab);
+    }
+  };
 
 //////////////////////////////////////////////////////////////////////////
 
+class TernaryOp : public Expr {
+  public:
+    std::unique_ptr<Expr> condition;
+    std::unique_ptr<Expr> trueExpr;
+    std::unique_ptr<Expr> falseExpr;
+  
+    TernaryOp(std::unique_ptr<Expr> condition, std::unique_ptr<Expr> trueExpr, std::unique_ptr<Expr> falseExpr)
+        : condition(std::move(condition)), trueExpr(std::move(trueExpr)), falseExpr(std::move(falseExpr)) {}
+  
+    void print() {
+      cout << "TernaryOp: ";
+      condition->print();
+      cout << " ? ";
+      trueExpr->print();
+      cout << " : ";
+      falseExpr->print();
+    }
+  
+    std::vector<TAC> generateTAC(std::string &tempVar) override {
+      std::vector<TAC> code;
+      std::string condTemp, trueTemp, falseTemp;
+  
+      // Generate TAC for the condition
+      auto condCode = condition->generateTAC(condTemp);
+      code.insert(code.end(), condCode.begin(), condCode.end());
+  
+      // Create labels
+      std::string trueLabel = "L" + std::to_string(AST::tempVarCounter++);
+      std::string falseLabel = "L" + std::to_string(AST::tempVarCounter++);
+      std::string endLabel = "L" + std::to_string(AST::tempVarCounter++);
+  
+      // Emit TAC for ternary operation
+      code.push_back(TAC("beq", condTemp, "0", falseLabel));
+  
+      // Generate TAC for true expression
+      auto trueCode = trueExpr->generateTAC(trueTemp);
+      code.insert(code.end(), trueCode.begin(), trueCode.end());
+      code.push_back(TAC("move", trueTemp, "", tempVar));
+      code.push_back(TAC("jmp", "", "", endLabel));
+  
+      // False label: result is falseExpr
+      code.push_back(TAC("label", falseLabel, "", ""));
+      auto falseCode = falseExpr->generateTAC(falseTemp);
+      code.insert(code.end(), falseCode.begin(), falseCode.end());
+      code.push_back(TAC("move", falseTemp, "", tempVar));
+  
+      // End label
+      code.push_back(TAC("label", endLabel, "", ""));
+  
+      return code;
+    }
+  
+    void resolveSymbol(SymbolTable &symTab) override {
+      condition->resolveSymbol(symTab);
+      trueExpr->resolveSymbol(symTab);
+      falseExpr->resolveSymbol(symTab);
+    }
+  };
+
+//////////////////////////////////////////////////////////////////////////
+
+// Variable declaration (e.g., `int x = 5;`)
 class Decl : public BlockItem {
   public:
     std::string name;
@@ -464,6 +593,103 @@ public:
 
   void resolveSymbol(SymbolTable &symTab) override {}
 };
+
+//////////////////////////////////////////////////////////////////////////
+class IfStmt : public Stmt {
+public:
+  std::unique_ptr<Expr> condition;
+  std::unique_ptr<Stmt> thenBlock;
+  std::unique_ptr<Stmt> elseBlock;
+
+  IfStmt(std::unique_ptr<Expr> condition, std::unique_ptr<Stmt> thenBlock,
+         std::unique_ptr<Stmt> elseBlock)
+      : condition(std::move(condition)), thenBlock(std::move(thenBlock)),
+        elseBlock(std::move(elseBlock)) {}
+
+  void print() {
+    cout << "IfStmt: ";
+    condition->print();
+    cout << "Then: ";
+    thenBlock->print();
+    if (elseBlock) {
+      cout << "Else: ";
+      elseBlock->print();
+    }
+  }
+
+  StmtType getType() const override { return StmtType::IF_STMT; }
+
+  std::vector<TAC> generateTAC(std::string &tempVar) override {
+    std::vector<TAC> code;
+    std::string condTemp;
+    auto condCode = condition->generateTAC(condTemp);
+    // code.insert(code.end(), condCode.begin(), condCode.end());
+
+    // Create labels
+    std::string elseLabel = "L" + std::to_string(AST::tempVarCounter++);
+    std::string endLabel = "L" + std::to_string(AST::tempVarCounter++);
+
+    // Emit TAC for if statement
+    std::string opInstr;
+    #define TOKEN_TO_STRING(token, str) \
+    case TokenType::token:          \
+      opInstr = str;               \
+        break;
+    if(auto *binOp = dynamic_cast<BinaryOp *>(condition.get())){
+      // If condition is a comparison, generate explicit branching TAC
+      std::string leftTemp, rightTemp;
+      auto leftCode = binOp->left->generateTAC(leftTemp);
+      auto rightCode = binOp->right->generateTAC(rightTemp);
+      code.insert(code.end(), leftCode.begin(), leftCode.end());
+      code.insert(code.end(), rightCode.begin(), rightCode.end());
+
+      switch(binOp->op){
+        TOKEN_TO_STRING(EQUAL_EQUAL, "beq")
+        TOKEN_TO_STRING(NOT_EQUAL, "bne")
+        TOKEN_TO_STRING(LESS_THAN, "blt")
+        TOKEN_TO_STRING(GREATER_THAN, "bgt")
+        TOKEN_TO_STRING(LESS_THAN_EQUAL, "ble")
+        TOKEN_TO_STRING(GREATER_THAN_EQUAL, "bge")
+      }
+      #undef TOKEN_TO_STRING
+      code.push_back(TAC(opInstr, leftTemp, rightTemp, elseLabel));
+    }else {
+      // Otherwise, assume nonzero means true
+      code.push_back(TAC("beqz", condTemp, elseLabel, ""));
+  }
+    
+
+    auto thenCode = thenBlock->generateTAC(tempVar);
+    code.insert(code.end(), thenCode.begin(), thenCode.end());
+
+    if(elseBlock){
+      code.push_back(TAC("jmp", "", "", endLabel));
+    }
+
+    // Emit TAC for else statement
+    code.push_back(TAC("label", elseLabel, "", ""));
+    if (elseBlock) {
+      auto elseCode = elseBlock->generateTAC(tempVar);
+      code.insert(code.end(), elseCode.begin(), elseCode.end());
+    }
+
+    // End label
+    code.push_back(TAC("label", endLabel, "", ""));
+
+    return code;
+  }
+
+  void resolveSymbol(SymbolTable &symTab) override {
+    condition->resolveSymbol(symTab);
+    symTab.enterScope();
+    thenBlock->resolveSymbol(symTab);
+    if (elseBlock) {
+      elseBlock->resolveSymbol(symTab);
+    }
+    symTab.exitScope();
+  }
+};
+
 
 //////////////////////////////////////////////////////////////////////////
 
