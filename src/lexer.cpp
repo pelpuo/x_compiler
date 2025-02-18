@@ -61,7 +61,11 @@ void Lexer::next(Token &token) {
   // Tokenizing Symbols
   switch (*BufferPtr) {
   case '+':
-    if(*(BufferPtr + 1) == '='){
+    if(*(BufferPtr + 1) == '+'){
+      token.type = TokenType::INCREMENT;
+      token.line = line;
+      BufferPtr += 2;
+    }else if(*(BufferPtr + 1) == '='){
       token.type = TokenType::PLUS_EQUAL;
       token.line = line;
       BufferPtr += 2;
@@ -254,6 +258,11 @@ void Lexer::next(Token &token) {
     return;
   case ':':
     token.type = TokenType::COLON;
+    token.line = line;
+    BufferPtr++;
+    return;
+  case ',':
+    token.type = TokenType::COMMA;
     token.line = line;
     BufferPtr++;
     return;

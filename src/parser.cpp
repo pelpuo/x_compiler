@@ -36,6 +36,9 @@ bool Parser::consume(TokenType type)
 
 int Parser::getPrecedence(TokenType op){
     switch(op){
+      case TokenType::INCREMENT:
+      case TokenType::DECREMENT:
+        return 15;
       case TokenType::LOGICAL_NOT:
         return 14;
       case TokenType::MUL:
@@ -80,6 +83,8 @@ int Parser::getPrecedence(TokenType op){
       case TokenType::LEFT_SHIFT_EQUAL:
       case TokenType::RIGHT_SHIFT_EQUAL:
         return 2;
+      case TokenType::COMMA:
+      return 1;
       default:
         return 0;
     }
@@ -118,6 +123,8 @@ bool Parser::isBinaryOp(TokenType type){
     case TokenType::XOR_EQUAL:
     case TokenType::LEFT_SHIFT_EQUAL:
     case TokenType::RIGHT_SHIFT_EQUAL:
+    case TokenType::QUESTION_MARK:
+    // case TokenType::COLON:
       return true;
     default:
       return false;
@@ -189,7 +196,7 @@ Func *Parser::parseFunction(){
   // stmts->addItem(std::unique_ptr<Stmt>(stmt));
   // consume(TokenType::SEMICOLON);
   consume(TokenType::RIGHT_BRACE);
-  stmts->addItem(std::unique_ptr<BlockItem>(new ReturnStmt(std::make_unique<IntLiteral>(0))));
+  // stmts->addItem(std::unique_ptr<BlockItem>(new ReturnStmt(std::make_unique<IntLiteral>(0))));
   return new Func(name, std::move(stmts));
 }
 
@@ -230,8 +237,7 @@ Stmt *Parser::parseStatement(){
     std::unique_ptr<Expr> retPtr(expr);
     consume(TokenType::SEMICOLON);
     return new ReturnStmt(std::move(retPtr));
-  }
-  else if(token.type == TokenType::ID){
+  }else if(token.type == TokenType::ID){
     Expr *expr = parseExpr();
     consume(TokenType::SEMICOLON);
     return new ExprStmt(std::unique_ptr<Expr>(expr));
@@ -247,7 +253,20 @@ Stmt *Parser::parseStatement(){
       elseStmt = parseStatement();
     }
     return new IfStmt(std::unique_ptr<Expr>(expr), std::unique_ptr<Stmt>(stmt), std::unique_ptr<Stmt>(elseStmt));
+  }else if(token.type == TokenType::LEFT_BRACE){
+    consume(TokenType::LEFT_BRACE);
+    std::unique_ptr<Block> block = std::make_unique<Block>();
+    BlockItem *nextItem;
+    while (token.type != TokenType::RIGHT_BRACE) {
+      nextItem = parseBlockItem();
+      if(nextItem == nullptr)break;
+      block->addItem(std::unique_ptr<BlockItem>(nextItem));
+    }
+    consume(TokenType::RIGHT_BRACE);
+    return block.release();
   }
+
+
   return nullptr;
 }
 
@@ -277,7 +296,6 @@ Expr *Parser::parseExpr(int minPrec)
       Expr *right = parseExpr(prec);
       left = new Assignment(std::unique_ptr<Expr>(left), std::unique_ptr<Expr>(right));
     }else if(op == TokenType::QUESTION_MARK){
-      consume(TokenType::QUESTION_MARK);
       Expr *trueExpr = parseExpr();
       consume(TokenType::COLON);
       Expr *falseExpr = parseExpr();

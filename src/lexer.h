@@ -25,6 +25,7 @@ typedef enum{
     RETURN,
     INT,
     VOID,
+    INCREMENT,
     DECREMENT,
     COMPLEMENT,
     UNKNOWN,
@@ -61,6 +62,8 @@ typedef enum{
     ELSE,
     QUESTION_MARK,
     COLON,
+
+    COMMA,
 }TokenType;
 
 static string TokenStr[] = {
@@ -81,6 +84,7 @@ static string TokenStr[] = {
     "RETURN",
     "INT",
     "VOID",
+    "INCREMENT",
     "DECREMENT",
     "COMPLEMENT",
     "UNKNOWN",
@@ -116,6 +120,8 @@ static string TokenStr[] = {
     "ELSE",
     "QUESTION_MARK",
     "COLON",
+
+    "COMMA",
 };
 
 typedef struct{

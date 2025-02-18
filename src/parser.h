@@ -23,6 +23,7 @@ class Parser{
         Func *parseFunction();
         Stmt *parseStatement();
         BlockItem *parseBlockItem();
+        Block *parseBlock();
         Expr *parseExpr(int minPrec = 0);
         Expr *parseTerm();
         Expr *parseFactor();

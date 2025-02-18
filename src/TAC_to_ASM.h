@@ -82,6 +82,60 @@ class TACtoASM{
                     // Division
                     outfile << "    rem " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg1) << ", " << mapToRegister(tac.arg2) << "\n";
                 }
+                else if (tac.op == "&") {
+                    // Division
+                    outfile << "    and " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg1) << ", " << mapToRegister(tac.arg2) << "\n";
+                }
+                else if (tac.op == "|") {
+                    // Division
+                    outfile << "    or " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg1) << ", " << mapToRegister(tac.arg2) << "\n";
+                }
+                else if (tac.op == "^") {
+                    // Division
+                    outfile << "    xor " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg1) << ", " << mapToRegister(tac.arg2) << "\n";
+                }
+                else if (tac.op == "<<") {
+                    // Division
+                    outfile << "    sll " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg1) << ", " << mapToRegister(tac.arg2) << "\n";
+                }
+                else if (tac.op == ">>") {
+                    // Division
+                    outfile << "    srl " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg1) << ", " << mapToRegister(tac.arg2) << "\n";
+                }
+                else if (tac.op == "&&") {
+                    // Division
+                    outfile << "    and " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg1) << ", " << mapToRegister(tac.arg2) << "\n";
+                }
+                else if (tac.op == "||") {
+                    // Division
+                    outfile << "    or " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg1) << ", " << mapToRegister(tac.arg2) << "\n";
+                }
+                else if (tac.op == "==") {
+                    // Division
+                    outfile << "    seqz " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg1) << ", " << mapToRegister(tac.arg2) << "\n";
+                }
+                else if (tac.op == "!=") {
+                    // Division
+                    outfile << "    snez " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg1) << ", " << mapToRegister(tac.arg2) << "\n";
+                }
+                else if (tac.op == "<") {
+                    // Division
+                    outfile << "    slt " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg1) << ", " << mapToRegister(tac.arg2) << "\n";
+                }
+                else if (tac.op == ">") {
+                    // Division
+                    outfile << "    slt " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg2) << ", " << mapToRegister(tac.arg1) << "\n";
+                }
+                else if (tac.op == "<=") {
+                    // Division
+                    outfile << "    slt " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg2) << ", " << mapToRegister(tac.arg1) << "\n";
+                    outfile << "    xori " << mapToRegister(tac.result) << ", " << mapToRegister(tac.result) << ", 1\n";
+                }
+                else if (tac.op == ">=") {
+                    // Division
+                    outfile << "    slt " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg1) << ", " << mapToRegister(tac.arg2) << "\n";
+                    outfile << "    xori " << mapToRegister(tac.result) << ", " << mapToRegister(tac.result) << ", 1\n";
+                }
                 else if (tac.op == "move") {
                     // Move value
                     outfile << "    mv " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg1) << "\n";
@@ -97,6 +151,10 @@ class TACtoASM{
                 else if (tac.op == "NEG") {
                     // Move value
                     outfile << "    neg " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg1) << "\n";
+                }
+                else if (tac.op == "beqz") {
+                    // Move value
+                    outfile << "    beqz " << mapToRegister(tac.arg1) << ", " << tac.arg2 << "\n";
                 }
                 else if (tac.op == "beq") {
                     // Move value
