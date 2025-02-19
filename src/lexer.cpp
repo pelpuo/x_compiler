@@ -44,6 +44,12 @@ void Lexer::next(Token &token) {
       token.type = TokenType::BREAK;
     }else if(value == "continue"){
       token.type = TokenType::CONTINUE;
+    }else if(value == "switch"){
+      token.type = TokenType::SWITCH;
+    }else if(value == "case"){
+      token.type = TokenType::CASE;
+    }else if(value == "default"){
+      token.type = TokenType::DEFAULT;
     }else {
       token.type = TokenType::ID;
       token.value = value;

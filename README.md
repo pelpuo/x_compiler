@@ -20,6 +20,7 @@ flex -o scanner.c scanner.flex
 
 ### Todos
 * Increment and Decrement operator
+* Switch
 * Optimizations
     - Fold conditional stmt
     - Constant folding

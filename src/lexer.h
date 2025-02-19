@@ -69,7 +69,11 @@ typedef enum{
     FOR,
     DO,
     BREAK,
-    CONTINUE
+    CONTINUE,
+
+    SWITCH,
+    CASE,
+    DEFAULT
 }TokenType;
 
 static string TokenStr[] = {
@@ -133,7 +137,11 @@ static string TokenStr[] = {
     "FOR",
     "DO",
     "BREAK",
-    "CONTINUE"
+    "CONTINUE",
+
+    "SWITCH",
+    "CASE",
+    "DEFAULT"
 };
 
 typedef struct{
