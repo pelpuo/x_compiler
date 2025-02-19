@@ -16,7 +16,7 @@ class WithDecl;
 
 using namespace std;
 
-enum class StmtType { EXPR, RETURN, NULL_STMT, IF_STMT, BLOCK };
+enum class StmtType { EXPR, RETURN, NULL_STMT, IF_STMT, BLOCK, WHILE, FOR, DO_WHILE, BREAK, CONTINUE };
 
 class ASTVisitor {
 public:
@@ -33,6 +33,7 @@ public:
 class AST {
 public:
   static int tempVarCounter; // Counter for temporary variables
+  static std::vector<std::pair<std::string, std::string>> loopLabels; // Loop labels for break and continue
   virtual ~AST() = default;
   virtual std::vector<TAC> generateTAC(std::string &tempVar) = 0;
   virtual void resolveSymbol(SymbolTable &symTab) {}
@@ -604,9 +605,14 @@ public:
   StmtType getType() const override { return StmtType::NULL_STMT; }
 
   void resolveSymbol(SymbolTable &symTab) override {}
+
+  std::vector<TAC> generateTAC(std::string &tempVar) override {
+    return {};
+  }
 };
 
 //////////////////////////////////////////////////////////////////////////
+
 class IfStmt : public Stmt {
 public:
   std::unique_ptr<Expr> condition;
@@ -686,6 +692,252 @@ public:
   }
 };
 
+//////////////////////////////////////////////////////////////////////////
+
+class WhileStmt : public Stmt {
+public:
+  std::unique_ptr<Expr> condition;
+  std::unique_ptr<Stmt> body;
+
+  WhileStmt(std::unique_ptr<Expr> condition, std::unique_ptr<Stmt> body)
+      : condition(std::move(condition)), body(std::move(body)) {}
+
+  void print() {
+    cout << "WhileStmt: ";
+    condition->print();
+    cout << "Body: ";
+    body->print();
+  }
+
+  StmtType getType() const override { return StmtType::WHILE; }
+
+  std::vector<TAC> generateTAC(std::string &tempVar) override {
+    std::vector<TAC> code;
+    std::string condTemp;
+
+    // 1. Create labels
+    std::string startLabel = "L" + std::to_string(AST::tempVarCounter++);
+    std::string endLabel = "L" + std::to_string(AST::tempVarCounter++);
+
+  // Push loop labels for break/continue support
+    AST::loopLabels.push_back({startLabel, endLabel});
+
+    // 2. Start label
+    code.push_back(TAC("label", startLabel, "", ""));
+
+    // 3. Generate TAC for the condition, storing the result in condTemp
+    auto condCode = condition->generateTAC(condTemp);
+    code.insert(code.end(), condCode.begin(), condCode.end());
+
+    // 4. Conditional jump: Jump to endLabel if condition is false (0)
+    code.push_back(TAC("beqz", condTemp, endLabel, ""));
+
+    // 5. Body
+    auto bodyCode = body->generateTAC(tempVar);
+    code.insert(code.end(), bodyCode.begin(), bodyCode.end());
+
+    // 6. Jump to startLabel
+    code.push_back(TAC("jmp", "", "", startLabel));
+
+    // 7. End label
+    code.push_back(TAC("label", endLabel, "", ""));
+
+    // Pop loop labels after processing
+    AST::loopLabels.pop_back();
+
+    return code;
+  }
+
+  void resolveSymbol(SymbolTable &symTab) override {
+    condition->resolveSymbol(symTab);
+    symTab.enterScope();
+    body->resolveSymbol(symTab);
+    symTab.exitScope();
+  }
+};
+
+//////////////////////////////////////////////////////////////////////////
+
+class ForStmt : public Stmt {
+public:
+  std::unique_ptr<BlockItem> init; // Change to BlockItem
+  std::unique_ptr<Expr> cond;
+  std::unique_ptr<Expr> inc;
+  std::unique_ptr<Stmt> body;
+
+  ForStmt(std::unique_ptr<BlockItem> init, std::unique_ptr<Expr> cond, std::unique_ptr<Expr> inc, std::unique_ptr<Stmt> body)
+      : init(std::move(init)), cond(std::move(cond)), inc(std::move(inc)), body(std::move(body)) {}
+
+  void print() {
+    cout << "ForStmt: ";
+    init->print();
+    cond->print();
+    inc->print();
+    body->print();
+  }
+
+  StmtType getType() const override { return StmtType::FOR; }
+
+  std::vector<TAC> generateTAC(std::string &tempVar) override {
+    std::vector<TAC> code;
+    std::string condTemp;
+
+    // 1. Create labels
+    std::string startLabel = "L" + std::to_string(AST::tempVarCounter++);
+    std::string incLabel = "L" + std::to_string(AST::tempVarCounter++);
+    std::string endLabel = "L" + std::to_string(AST::tempVarCounter++);
+
+    // Push loop labels: {continue -> incLabel, break -> endLabel}
+    AST::loopLabels.push_back({incLabel, endLabel});
+    
+    // 2. Init
+    auto initCode = init->generateTAC(tempVar);
+    code.insert(code.end(), initCode.begin(), initCode.end());
+    
+    // 3. Start label
+    code.push_back(TAC("label", startLabel, "", ""));
+    
+    // 4. Generate TAC for the condition, storing the result in condTemp
+    auto condCode = cond->generateTAC(condTemp);
+    code.insert(code.end(), condCode.begin(), condCode.end());
+    
+    // 5. Conditional jump: Jump to endLabel if condition is false (0)
+    code.push_back(TAC("beqz", condTemp, endLabel, ""));
+    
+    // 6. Body
+    auto bodyCode = body->generateTAC(tempVar);
+    code.insert(code.end(), bodyCode.begin(), bodyCode.end());
+    
+    // 7. Increment
+    code.push_back(TAC("label", incLabel, "", ""));
+    auto incCode = inc->generateTAC(tempVar);
+    code.insert(code.end(), incCode.begin(), incCode.end());
+    
+    // 8. Jump to startLabel
+    code.push_back(TAC("jmp", "", "", startLabel));
+    
+    // 9. End label
+    code.push_back(TAC("label", endLabel , "", ""));
+
+    AST::loopLabels.pop_back();
+
+    return code;
+  }
+
+  void resolveSymbol(SymbolTable &symTab) override {
+    symTab.enterScope();
+    init->resolveSymbol(symTab);
+    cond->resolveSymbol(symTab);
+    inc->resolveSymbol(symTab);
+    body->resolveSymbol(symTab);
+    symTab.exitScope();
+  }
+};
+
+//////////////////////////////////////////////////////////////////////////
+
+class DoWhileStmt : public Stmt {
+public:
+  std::unique_ptr<Stmt> body;
+  std::unique_ptr<Expr> cond;
+
+  DoWhileStmt(std::unique_ptr<Stmt> body, std::unique_ptr<Expr> cond)
+      : body(std::move(body)), cond(std::move(cond)) {}
+
+  void print() {
+    cout << "DoWhileStmt: ";
+    body->print();
+    cond->print();
+  }
+
+  StmtType getType() const override { return StmtType::DO_WHILE; }
+
+  std::vector<TAC> generateTAC(std::string &tempVar) override {
+    std::vector<TAC> code;
+    std::string condTemp;
+
+    // 1. Create labels
+    std::string startLabel = "L" + std::to_string(AST::tempVarCounter++);
+    std::string condLabel = "L" + std::to_string(AST::tempVarCounter++);
+    std::string endLabel = "L" + std::to_string(AST::tempVarCounter++);
+
+    // Push loop labels: {continue -> condLabel, break -> endLabel}
+    AST::loopLabels.push_back({condLabel, endLabel});
+
+    // 2. Start label
+    code.push_back(TAC("label", startLabel, "", ""));
+    
+    // 3. Body
+    auto bodyCode = body->generateTAC(tempVar);
+    code.insert(code.end(), bodyCode.begin(), bodyCode.end());
+    
+    // 4. Generate TAC for the condition, storing the result in condTemp
+    auto condCode = cond->generateTAC(condTemp);
+    code.push_back(TAC("label", condLabel, "", ""));
+    code.insert(code.end(), condCode.begin(), condCode.end());
+    
+    // 5. Conditional jump: Jump to startLabel if condition is true (1)
+    code.push_back(TAC("bnez", condTemp, startLabel, ""));
+
+    // 6. End label
+    code.push_back(TAC("label", endLabel, "", ""));
+
+    AST::loopLabels.pop_back();
+
+    return code;
+  }
+
+  void resolveSymbol(SymbolTable &symTab) override {
+    symTab.enterScope();
+    body->resolveSymbol(symTab);
+    cond->resolveSymbol(symTab);
+    symTab.exitScope();
+  }
+};
+
+//////////////////////////////////////////////////////////////////////////
+
+class BreakStmt : public Stmt {
+public:
+  void print() { cout << "BreakStmt" << endl; }
+  StmtType getType() const override { return StmtType::BREAK; }
+
+  std::vector<TAC> generateTAC(std::string &tempVar) {
+    std::vector<TAC> code;
+  
+    if (!AST::loopLabels.empty()) {
+      code.push_back(TAC("jmp", "", "", AST::loopLabels.back().second)); // Jump to end label
+    } else {
+      std::cerr << "Error: 'break' outside of loop" << std::endl;
+    }
+  
+    return code;
+  }
+
+  void resolveSymbol(SymbolTable &symTab) override {}
+};
+
+//////////////////////////////////////////////////////////////////////////
+
+class ContinueStmt : public Stmt {
+public:
+  void print() { cout << "ContinueStmt" << endl; }
+  StmtType getType() const override { return StmtType::CONTINUE; }
+
+  std::vector<TAC> generateTAC(std::string &tempVar) {
+    std::vector<TAC> code;
+  
+    if (!AST::loopLabels.empty()) {
+      code.push_back(TAC("jmp", "", "", AST::loopLabels.back().first)); // Jump to continue label
+    } else {
+      std::cerr << "Error: 'continue' outside of loop" << std::endl;
+    }
+  
+    return code;
+  }
+  
+  void resolveSymbol(SymbolTable &symTab) override {}
+};
 
 //////////////////////////////////////////////////////////////////////////
 

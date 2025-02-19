@@ -264,10 +264,58 @@ Stmt *Parser::parseStatement(){
     }
     consume(TokenType::RIGHT_BRACE);
     return block.release();
+  }else if(token.type == TokenType::WHILE){
+    consume(TokenType::WHILE);
+    consume(TokenType::LEFT_PAREN);
+    Expr *expr = parseExpr();
+    consume(TokenType::RIGHT_PAREN);
+    Stmt *stmt = parseStatement();
+    return new WhileStmt(std::unique_ptr<Expr>(expr), std::unique_ptr<Stmt>(stmt));
+  }else if(token.type == TokenType::FOR){
+    consume(TokenType::FOR);
+    consume(TokenType::LEFT_PAREN);
+    
+    // Parse init part which can be either a declaration or an expression statement
+    std::unique_ptr<BlockItem> init;
+    if (token.type == TokenType::INT) {
+      init.reset(parseDeclaration());
+    } else {
+      init.reset(parseExprStmt());
+    }
+
+    Expr *cond = parseExpr();
+    consume(TokenType::SEMICOLON);
+    Expr *inc = parseExpr();
+    consume(TokenType::RIGHT_PAREN);
+    Stmt *stmt = parseStatement();
+    return new ForStmt(std::move(init), std::unique_ptr<Expr>(cond), std::unique_ptr<Expr>(inc), std::unique_ptr<Stmt>(stmt));
+  }else if(token.type == TokenType::DO){
+    consume(TokenType::DO);
+    Stmt *stmt = parseStatement();
+    consume(TokenType::WHILE);
+    consume(TokenType::LEFT_PAREN);
+    Expr *expr = parseExpr();
+    consume(TokenType::RIGHT_PAREN);
+    consume(TokenType::SEMICOLON);
+    return new DoWhileStmt(std::unique_ptr<Stmt>(stmt), std::unique_ptr<Expr>(expr));
+  }else if(token.type == TokenType::BREAK){
+    consume(TokenType::BREAK);
+    consume(TokenType::SEMICOLON);
+    return new BreakStmt();
+  }else if(token.type == TokenType::CONTINUE){
+    consume(TokenType::CONTINUE);
+    consume(TokenType::SEMICOLON);
+    return new ContinueStmt();
   }
 
 
   return nullptr;
+}
+
+ExprStmt *Parser::parseExprStmt() {
+  Expr *expr = parseExpr();
+  consume(TokenType::SEMICOLON);
+  return new ExprStmt(std::unique_ptr<Expr>(expr));
 }
 
 Expr *Parser::parseExpr(int minPrec)

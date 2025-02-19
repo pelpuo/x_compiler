@@ -28,6 +28,7 @@ class Parser{
         Expr *parseTerm();
         Expr *parseFactor();
         Decl *parseDeclaration();
+        ExprStmt *parseExprStmt();
         
     public:
         Parser(Lexer &lex);

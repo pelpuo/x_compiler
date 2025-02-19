@@ -34,6 +34,16 @@ void Lexer::next(Token &token) {
       token.type = TokenType::IF;
     }else if(value == "else"){
       token.type = TokenType::ELSE;
+    }else if(value == "while"){
+      token.type = TokenType::WHILE;
+    }else if(value == "for"){
+      token.type = TokenType::FOR;
+    }else if(value == "do"){
+      token.type = TokenType::DO;
+    }else if(value == "break"){
+      token.type = TokenType::BREAK;
+    }else if(value == "continue"){
+      token.type = TokenType::CONTINUE;
     }else {
       token.type = TokenType::ID;
       token.value = value;

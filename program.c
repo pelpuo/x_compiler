@@ -1,11 +1,7 @@
 int main(void) {
-    int a = 1;
-    int b = 0;
-    if (a <= 3){
-        int a = 5;
-        return a;
-    }else{
-        int b = 8;
+    int x = 10;
+    for(int i = 0; i < 10; i= i+1){
+        x += i;
     }
-    return a + b;
+    return x;
  }

@@ -19,13 +19,7 @@ flex -o scanner.c scanner.flex
  
 
 ### Todos
-* Error Handling on AST Generation
-* Code Generation
-* Unary Expressions
-* Binary Expressions
-* Symbol Table
-* Control Flow
-    - If Stmt
-    - While loop
-    - For Loop
-* Scopes
+* Increment and Decrement operator
+* Optimizations
+    - Fold conditional stmt
+    - Constant folding

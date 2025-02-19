@@ -156,6 +156,10 @@ class TACtoASM{
                     // Move value
                     outfile << "    beqz " << mapToRegister(tac.arg1) << ", " << tac.arg2 << "\n";
                 }
+                else if (tac.op == "bnez") {
+                    // Move value
+                    outfile << "    bnez " << mapToRegister(tac.arg1) << ", " << tac.arg2 << "\n";
+                }
                 else if (tac.op == "beq") {
                     // Move value
                     outfile << "    beq " << mapToRegister(tac.arg1) << ", " << mapToRegister(tac.arg2) << ", " << tac.result << "\n";

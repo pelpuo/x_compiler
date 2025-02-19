@@ -64,6 +64,12 @@ typedef enum{
     COLON,
 
     COMMA,
+
+    WHILE,
+    FOR,
+    DO,
+    BREAK,
+    CONTINUE
 }TokenType;
 
 static string TokenStr[] = {
@@ -122,6 +128,12 @@ static string TokenStr[] = {
     "COLON",
 
     "COMMA",
+
+    "WHILE",
+    "FOR",
+    "DO",
+    "BREAK",
+    "CONTINUE"
 };
 
 typedef struct{
