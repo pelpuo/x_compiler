@@ -306,7 +306,61 @@ Stmt *Parser::parseStatement(){
     consume(TokenType::CONTINUE);
     consume(TokenType::SEMICOLON);
     return new ContinueStmt();
-  }
+  }else if(token.type == TokenType::SWITCH){
+    consume(TokenType::SWITCH);
+    consume(TokenType::LEFT_PAREN);
+    Expr *expr = parseExpr();
+    consume(TokenType::RIGHT_PAREN);
+    consume(TokenType::LEFT_BRACE);
+    
+    std::vector<std::pair<std::unique_ptr<Expr>, std::unique_ptr<Stmt>>> cases;
+    std::unique_ptr<Stmt> defaultCase = nullptr;
+
+    while(token.type != TokenType::RIGHT_BRACE){
+        if(token.type == TokenType::CASE){
+          consume(TokenType::CASE);
+          Expr *caseExpr = parseExpr();
+          consume(TokenType::COLON);
+
+          // Create a new block to hold multiple statements
+          std::unique_ptr<Block> caseBlock = std::make_unique<Block>();
+
+          // Parse multiple statements until another `case`, `default`, or `}`
+          while (token.type != TokenType::CASE 
+            && token.type != TokenType::DEFAULT 
+            && token.type != TokenType::RIGHT_BRACE) {
+              Stmt *stmt = parseStatement();
+              caseBlock->addItem(std::unique_ptr<BlockItem>(stmt));
+          }
+
+          cases.push_back({std::unique_ptr<Expr>(caseExpr), std::move(caseBlock)});
+        }else if(token.type == TokenType::DEFAULT){
+          consume(TokenType::DEFAULT);
+          consume(TokenType::COLON);
+          
+          std::unique_ptr<Block> defaultBlock = std::make_unique<Block>();
+
+          // Collect multiple statements in the default case
+          while (token.type != TokenType::CASE && token.type != TokenType::RIGHT_BRACE) {
+              Stmt *stmt = parseStatement();
+              defaultBlock->addItem(std::unique_ptr<BlockItem>(stmt));
+          }
+
+          defaultCase = std::move(defaultBlock);
+        }
+    }
+    consume(TokenType::RIGHT_BRACE);
+
+    SwitchStmt *newSwitch = new SwitchStmt(std::unique_ptr<Expr>(expr));
+    for (auto &case_ : cases) {
+        newSwitch->addCase(std::move(case_.first), std::move(case_.second));
+    }
+    if (defaultCase) {
+        newSwitch->setDefault(std::move(defaultCase));
+    }
+
+    return newSwitch;
+}
 
 
   return nullptr;

@@ -16,7 +16,7 @@ class WithDecl;
 
 using namespace std;
 
-enum class StmtType { EXPR, RETURN, NULL_STMT, IF_STMT, BLOCK, WHILE, FOR, DO_WHILE, BREAK, CONTINUE };
+enum class StmtType { EXPR, RETURN, NULL_STMT, IF_STMT, BLOCK, WHILE, FOR, DO_WHILE, BREAK, CONTINUE, SWITCH, CASE, DEFAULT, DECL, FUNC_DECL, WITH_DECL };
 
 class ASTVisitor {
 public:
@@ -34,6 +34,7 @@ class AST {
 public:
   static int tempVarCounter; // Counter for temporary variables
   static std::vector<std::pair<std::string, std::string>> loopLabels; // Loop labels for break and continue
+  static std::vector<std::string> switchLabels; // Switch labels for break
   virtual ~AST() = default;
   virtual std::vector<TAC> generateTAC(std::string &tempVar) = 0;
   virtual void resolveSymbol(SymbolTable &symTab) {}
@@ -907,7 +908,9 @@ public:
   
     if (!AST::loopLabels.empty()) {
       code.push_back(TAC("jmp", "", "", AST::loopLabels.back().second)); // Jump to end label
-    } else {
+    }else if(!AST::switchLabels.empty()){
+      code.push_back(TAC("jmp", "", "", AST::switchLabels.back())); // Jump to end label
+    }else {
       std::cerr << "Error: 'break' outside of loop" << std::endl;
     }
   
@@ -939,6 +942,113 @@ public:
   void resolveSymbol(SymbolTable &symTab) override {}
 };
 
+//////////////////////////////////////////////////////////////////////////
+
+class SwitchStmt : public Stmt {
+public:
+  std::unique_ptr<Expr> expr;
+  std::vector<std::pair<std::unique_ptr<Expr>, std::unique_ptr<Stmt>>> cases;
+  std::unique_ptr<Stmt> defaultCase;
+
+  SwitchStmt(std::unique_ptr<Expr> expr) : expr(std::move(expr)) {}
+
+  void addCase(std::unique_ptr<Expr> caseExpr, std::unique_ptr<Stmt> caseStmt) {
+    cases.push_back({std::move(caseExpr), std::move(caseStmt)});
+  }
+
+  void setDefault(std::unique_ptr<Stmt> defaultCase) {
+    this->defaultCase = std::move(defaultCase);
+  }
+
+  void print() {
+    cout << "SwitchStmt: ";
+    expr->print();
+    for (auto &case_ : cases) {
+      case_.first->print();
+      case_.second->print();
+    }
+    if (defaultCase) {
+      defaultCase->print();
+    }
+  }
+
+  StmtType getType() const override { return StmtType::SWITCH; }
+
+  std::vector<TAC> generateTAC(std::string &tempVar) override {
+    std::vector<TAC> code;
+    std::string exprTemp;
+
+    // 1. Generate TAC for the switch expression
+    auto exprCode = expr->generateTAC(exprTemp);
+    code.insert(code.end(), exprCode.begin(), exprCode.end());
+
+    // 2. Create labels for each case
+    std::vector<std::string> caseLabels;
+    for (int i = 0; i < cases.size(); i++) {
+        caseLabels.push_back("L" + std::to_string(AST::tempVarCounter++));
+    }
+    std::string defaultLabel = defaultCase ? "L" + std::to_string(AST::tempVarCounter++) : ""; 
+    std::string endLabel = "L" + std::to_string(AST::tempVarCounter++);
+
+    AST::switchLabels.push_back(endLabel);
+
+    // 3. Emit conditional jumps for each case
+    for (int i = 0; i < cases.size(); i++) {
+        std::string caseTemp;
+        auto caseCode = cases[i].first->generateTAC(caseTemp);
+        code.insert(code.end(), caseCode.begin(), caseCode.end());
+
+        // If exprTemp == caseTemp, jump to corresponding case label
+        code.push_back(TAC("beq", exprTemp, caseTemp, caseLabels[i]));
+    }
+
+    // 4. Jump to default case if it exists, otherwise jump to end
+    if (!defaultLabel.empty()) {
+        code.push_back(TAC("jmp", "", "", defaultLabel));
+    } else {
+        code.push_back(TAC("jmp", "", "", endLabel));
+    }
+
+    // 5. Emit TAC for each case statement
+    for (int i = 0; i < cases.size(); i++) {
+        code.push_back(TAC("label", caseLabels[i], "", ""));
+        auto caseCode = cases[i].second->generateTAC(tempVar);
+        code.insert(code.end(), caseCode.begin(), caseCode.end());
+
+        // No automatic jump to endLabel to allow fall-through behavior
+    }
+
+    // 6. Default case
+    if (!defaultLabel.empty()) {
+        code.push_back(TAC("label", defaultLabel, "", ""));
+        auto defaultCode = defaultCase->generateTAC(tempVar);
+        code.insert(code.end(), defaultCode.begin(), defaultCode.end());
+    }
+
+    // 7. End label
+    code.push_back(TAC("label", endLabel, "", ""));
+
+    AST::switchLabels.pop_back();
+
+    return code;
+  }
+
+
+  void resolveSymbol(SymbolTable &symTab) override {
+    expr->resolveSymbol(symTab);
+    symTab.enterScope();
+    for (auto &case_ : cases) {
+      case_.first->resolveSymbol(symTab);
+      case_.second->resolveSymbol(symTab);
+    }
+    if (defaultCase) {
+      defaultCase->resolveSymbol(symTab);
+    }
+    symTab.exitScope();
+  }
+
+
+};
 //////////////////////////////////////////////////////////////////////////
 
 class Func : public AST {

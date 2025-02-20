@@ -127,6 +127,21 @@ void Lexer::next(Token &token) {
       token.type = TokenType::DIV_EQUAL;
       token.line = line;
       BufferPtr += 2;
+    }else if(*(BufferPtr + 1) == '/'){
+      while(*BufferPtr != '\n'){
+        BufferPtr++;
+      }
+      next(token);
+    }else if(*(BufferPtr + 1) == '*'){
+      BufferPtr += 2;
+      while(*BufferPtr != '*' && *(BufferPtr + 1) != '/'){
+        if(*BufferPtr == '\n'){
+          line++;
+        }
+        BufferPtr++;
+      }
+      BufferPtr += 2;
+      next(token);
     }else{
       token.type = TokenType::DIV;
       token.line = line;

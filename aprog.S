@@ -7,27 +7,29 @@ main:
     addi s0, sp, 64
     li t0, 10
     sd t0, -8(s0)
-    li t1, 0
-    sd t1, -16(s0)
-L1:
-    ld t2, -16(s0)
-    li t3, 10
-    slt t4, t2, t3
-    beqz t4, L3
-    ld t5, -8(s0)
-    ld t6, -16(s0)
-    add t0, t5, t6
-    sd t0, -24(s0)
+    ld t1, -8(s0)
+    li t2, 1
+    beq t1, t2, L2
+    li t3, 2
+    beq t1, t3, L3
+    j L4
 L2:
-    ld t1, -16(s0)
-    ld t2, -16(s0)
-    li t3, 1
-    add t4, t2, t3
-    sd t4, -32(s0)
-    j L1
+    ld t4, -8(s0)
+    li t5, 1
+    sd t5, -16(s0)
+    j L5
 L3:
-    ld t5, -8(s0)
-    mv a0, t5
+    ld t6, -8(s0)
+    li t0, 2
+    sd t0, -24(s0)
+    j L5
+L4:
+    ld t1, -8(s0)
+    li t2, 3
+    sd t2, -32(s0)
+L5:
+    ld t3, -8(s0)
+    mv a0, t3
     ld ra, 56(sp)
     ld s0, 48(sp)
     addi sp, sp, 64
