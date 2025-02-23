@@ -59,6 +59,13 @@ class BlockItem : public AST {
     virtual std::vector<TAC> generateTAC(std::string &tempVar) = 0;
 };
   
+class Declaration : public BlockItem {
+  public:
+    virtual ~Declaration() = default;
+    virtual void print() = 0;
+    virtual std::vector<TAC> generateTAC(std::string &tempVar) = 0;
+};
+  
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -79,6 +86,42 @@ public:
   void resolveSymbol(SymbolTable &symTab) override {}
 };
 
+//////////////////////////////////////////////////////////////////////////
+
+class ArgList {
+  public:
+    std::vector<std::unique_ptr<Expr>> args;
+
+    void addArg(std::unique_ptr<Expr> arg) {
+      args.push_back(std::move(arg));
+    }
+  
+    void print() {
+      for (size_t i = 0; i < args.size(); ++i) {
+        if (args[i]) args[i]->print();
+        if (i < args.size() - 1) cout << ", ";
+      }
+    }
+  
+    std::vector<TAC> generateTAC(std::vector<TAC> &code) {
+      for (auto &arg : args) {
+        std::string tempVar;
+        auto argCode = arg->generateTAC(tempVar);
+        code.insert(code.end(), argCode.begin(), argCode.end());
+  
+        // Push argument before the function call
+        code.push_back(TAC("arg", tempVar, "", ""));
+      }
+      return code;
+    }
+  
+    void resolveSymbol(SymbolTable &symTab) {
+      for (auto &arg : args) {
+        arg->resolveSymbol(symTab);
+      }
+    }
+  };
+  
 //////////////////////////////////////////////////////////////////////////
 
 // Variable reference (e.g., `x`)
@@ -443,47 +486,57 @@ class TernaryOp : public Expr {
 
 //////////////////////////////////////////////////////////////////////////
 
-// Variable declaration (e.g., `int x = 5;`)
-class Decl : public BlockItem {
-  public:
-    std::string name;
-    std::unique_ptr<Expr> initializer;  // Optional initializer
-  
-    Decl(std::string name, std::unique_ptr<Expr> initializer = nullptr)
-        : name(std::move(name)), initializer(std::move(initializer)) {}
-  
-    void print() override {
-      cout << "Declaration: " << name;
-      if (initializer) {
-        cout << " = ";
-        initializer->print();
-      }
-      cout << endl;
+class FuncCall : public Expr {
+public:
+  std::string name;
+  std::unique_ptr<ArgList> args;
+
+  FuncCall(const std::string &name, std::unique_ptr<ArgList> args)
+      : name(name), args(std::move(args)) {}
+
+  void print() {
+    cout << "FuncCall: " << name << "(";
+    if (args) {
+      args->print();
     }
-  
-    std::vector<TAC> generateTAC(std::string &tempVar) override {
-      std::vector<TAC> code;
-      tempVar = name;  // Variable name acts as the destination
-  
-      if (initializer) {
-        std::string initTemp;
-        auto initCode = initializer->generateTAC(initTemp);
-        code.insert(code.end(), initCode.begin(), initCode.end());
-        code.push_back(TAC("store", initTemp, "", tempVar));
-      }
-      return code;
+    cout << ")" << endl;
+  }
+
+  std::vector<TAC> generateTAC(std::string &tempVar) override {
+    std::vector<TAC> code;
+    // std::string argsTemp;
+
+    // Generate TAC for the argument list
+    if (args) {
+      args->generateTAC(code);
+      // auto argsCode = args->generateTAC(code);
+      // code.insert(code.end(), argsCode.begin(), argsCode.end());
     }
 
-    void resolveSymbol(SymbolTable &symTab) override {
-      if (!symTab.declare(name)) {
-        std::cerr << "ERROR: Redeclaration of variable '" << name << "'" << std::endl;
-        exit(1);
-      }
-      if (initializer) {
-        initializer->resolveSymbol(symTab);
-      }
+    // Create a new temporary variable for the result
+    tempVar = "t" + std::to_string(tempVarCounter++);
+
+    // Emit TAC for function call
+    code.push_back(TAC("call", name, "", tempVar));
+
+    return code;
+  }
+
+  void resolveSymbol(SymbolTable &symTab) override {
+    if (!symTab.isFunction(name)) {
+      std::cerr << "ERROR: Undeclared function '" << name << "'" << std::endl;
+      exit(1);
     }
-};  
+    const auto &paramTypes = symTab.getFunctionParams(name);
+    if (args && args->args.size() != paramTypes->size()) {
+      std::cerr << "ERROR: Argument count mismatch for function '" << name << "'" << std::endl;
+      exit(1);
+    }
+    if (args) {
+      args->resolveSymbol(symTab);
+    }
+  }
+};
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -1049,43 +1102,157 @@ public:
 
 
 };
+
 //////////////////////////////////////////////////////////////////////////
 
-class Func : public AST {
+
+// Variable declaration (e.g., `int x = 5;`)
+class VarDecl : public Declaration {
   public:
     std::string name;
-    std::unique_ptr<Block> body;
+    std::unique_ptr<Expr> initializer;  // Optional initializer
   
-    Func(std::string name, std::unique_ptr<Block> body)
-        : name(std::move(name)), body(std::move(body)) {}
+    VarDecl(const std::string &name, std::unique_ptr<Expr> initializer = nullptr)
+        : name(name), initializer(std::move(initializer)) {}
   
-    void print() {
-      cout << "Function: " << name << endl;
-      cout << "Body: " << endl;
-      body->print();
+    void print() override {
+      cout << "Declaration: " << name;
+      if (initializer) {
+        cout << " = ";
+        initializer->print();
+      }
+      cout << endl;
     }
   
     std::vector<TAC> generateTAC(std::string &tempVar) override {
       std::vector<TAC> code;
-      auto bodyCode = body->generateTAC(tempVar);
-      code.insert(code.end(), bodyCode.begin(), bodyCode.end());
+      tempVar = name;  // Variable name acts as the destination
+  
+      if (initializer) {
+        std::string initTemp;
+        auto initCode = initializer->generateTAC(initTemp);
+        code.insert(code.end(), initCode.begin(), initCode.end());
+        code.push_back(TAC("store", initTemp, "", tempVar));
+      }
       return code;
     }
 
     void resolveSymbol(SymbolTable &symTab) override {
-      symTab.enterScope();
-      body->resolveSymbol(symTab);
-      symTab.exitScope();
+      if (!symTab.declareVariable(name)) {
+        std::cerr << "ERROR: Redeclaration of variable '" << name << "'" << std::endl;
+        exit(1);
+      }
+      if (initializer) {
+        initializer->resolveSymbol(symTab);
+      }
+    }
+};  
+
+//////////////////////////////////////////////////////////////////////////
+
+class FuncDecl : public Declaration {
+public:
+  std::string name;
+  std::vector<std::string> params;
+  std::unique_ptr<Block> body;
+
+  FuncDecl(const std::string &name, std::vector<std::string> params, std::unique_ptr<Block> body)
+      : name(name), params(std::move(params)), body(std::move(body)) {}
+
+  void print() override {
+    cout << "Function Declaration: " << name << "(";
+    for (const auto &param : params) {
+      cout << param << ", ";
+    }
+    cout << ")";
+    if (body) {
+      cout << endl;
+      body->print();
+    }
+  }
+
+  std::vector<TAC> generateTAC(std::string &tempVar) override {
+    std::vector<TAC> code;
+    code.push_back(TAC("function", name, "", ""));
+    
+    // Emit TAC for function parameters
+    for (const auto &param : params) {
+      code.push_back(TAC("param", param, "", ""));
     }
 
-  };
+    if (body) {
+      auto bodyCode = body->generateTAC(tempVar);
+      code.insert(code.end(), bodyCode.begin(), bodyCode.end());
+    }
+    return code;
+  }
+
+  void resolveSymbol(SymbolTable &symTab) override {
+    // Ensure the function name is uniquely declared
+    if (!symTab.declareFunction(name, params)) {
+        std::cerr << "ERROR: Redeclaration of function '" << name << "'" << std::endl;
+        exit(1);
+    }
+    // Only create a new scope if the function has a body
+    if (body) {
+        symTab.enterScope();
+        
+        for (const auto &param : params) {
+            if (param == name) {
+                std::cerr << "ERROR: Parameter '" << param << "' conflicts with function name '" << name << "'" << std::endl;
+                exit(1);
+            }
+
+            if (!symTab.declareVariable(param)) {
+                std::cerr << "ERROR: Redeclaration of parameter '" << param << "'" << std::endl;
+                exit(1);
+            }
+        }
+
+        body->resolveSymbol(symTab);
+        symTab.exitScope();
+    }
+}
+
+};
+
+//////////////////////////////////////////////////////////////////////////
+
+// class Func : public AST {
+//   public:
+//     std::string name;
+//     std::unique_ptr<Block> body;
+  
+//     Func(std::string name, std::unique_ptr<Block> body)
+//         : name(std::move(name)), body(std::move(body)) {}
+  
+//     void print() {
+//       cout << "Function: " << name << endl;
+//       cout << "Body: " << endl;
+//       body->print();
+//     }
+  
+//     std::vector<TAC> generateTAC(std::string &tempVar) override {
+//       std::vector<TAC> code;
+//       auto bodyCode = body->generateTAC(tempVar);
+//       code.insert(code.end(), bodyCode.begin(), bodyCode.end());
+//       return code;
+//     }
+
+//     void resolveSymbol(SymbolTable &symTab) override {
+//       symTab.enterScope();
+//       body->resolveSymbol(symTab);
+//       symTab.exitScope();
+//     }
+
+//   };
   
 
 class ASTProgram : public AST {
 public:
-  std::vector<std::unique_ptr<Func>> functions;
+  std::vector<std::unique_ptr<FuncDecl>> functions;
 
-  void addFunction(std::unique_ptr<Func> func) {
+  void addFunction(std::unique_ptr<FuncDecl> func) {
     functions.push_back(std::move(func));
   }
 
@@ -1106,8 +1273,10 @@ public:
   }
 
   void resolveSymbol(SymbolTable &symTab) override {
+    symTab.enterScope();
     for (auto &func : functions) {
       func->resolveSymbol(symTab);
     }
+    symTab.exitScope();
   }
 };

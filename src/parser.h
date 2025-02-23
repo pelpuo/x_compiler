@@ -20,14 +20,16 @@ class Parser{
         bool isCompoundAssignOp(TokenType type);
 
         ASTProgram *parseProgram();
-        Func *parseFunction();
+        FuncDecl *parseFunction();
         Stmt *parseStatement();
         BlockItem *parseBlockItem();
         Block *parseBlock();
         Expr *parseExpr(int minPrec = 0);
         Expr *parseTerm();
         Expr *parseFactor();
-        Decl *parseDeclaration();
+        Declaration *parseDeclaration();
+        VarDecl *parseVarDecl(const string &varName);
+        FuncDecl *parseFuncDecl(const string &funcName);
         ExprStmt *parseExprStmt();
         
     public:

@@ -19,7 +19,7 @@ void CodeGenerator::generate(ASTProgram *ast) {
     }
 }
 
-void CodeGenerator::generateFunction(Func *func) {
+void CodeGenerator::generateFunction(FuncDecl *func) {
     outfile << ".globl " << func->name  << endl
             << ".type " << func->name << ", @function" << endl
             << func->name << ":" << endl;

@@ -13,7 +13,7 @@ class CodeGenerator{
 
     private:
         ofstream &outfile;
-        void generateFunction(Func *func);
+        void generateFunction(FuncDecl *func);
         void generateStatement(Stmt *stmt);
         void generateAssign(IntLiteral *expr);
         void generateExpr(BinaryOp *expr);

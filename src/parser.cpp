@@ -159,45 +159,64 @@ ASTProgram *Parser::parse()
 ASTProgram *Parser::parseProgram()
 {
   ASTProgram *program = new ASTProgram();
-  Func *func;
-  while ((func = parseFunction()))
-  {
-    program->addFunction(std::unique_ptr<Func>(func));
-    if (expect(TokenType::EOI))
-    {
+  FuncDecl *func;
+
+  // Parse functions until we reach end-of-input (EOI)
+  while ((func = parseFunction())) {
+    program->addFunction(std::unique_ptr<FuncDecl>(func));
+
+    // If we encounter an EOI (End of Input), stop parsing
+    if (token.type == TokenType::EOI) {
       return program;
     }
   }
+
+  // Optionally, you can handle cases where there are no functions here.
+  // E.g., if we reach this point without parsing any functions, we could throw an error.
   return program;
 }
 
-Func *Parser::parseFunction(){
-  // std::unique_ptr<Block> stmts;
+FuncDecl *Parser::parseFunction()
+{
   std::unique_ptr<Block> stmts = std::make_unique<Block>();
 
+  // Parse the return type of the function (assumed 'int')
   consume(TokenType::INT);
+
+  // Parse the function name
   expect(TokenType::ID);
-  string name = token.value.value();
+  std::string name = token.value.value();
   consume(TokenType::ID);
 
+  // Parse the parameters inside parentheses
   consume(TokenType::LEFT_PAREN);
+  std::vector<std::string> params;
 
-  consume(TokenType::VOID);
+  // Parse each parameter if available
+  if (token.type != TokenType::RIGHT_PAREN) {
+    do {
+      consume(TokenType::INT); // Assume each param is of type 'int'
+      expect(TokenType::ID);
+      std::string paramName = token.value.value();
+      consume(TokenType::ID);
+      params.push_back(paramName);
+    } while (token.type == TokenType::COMMA && (advance(), true));
+  }
 
   consume(TokenType::RIGHT_PAREN);
 
+  // Parse the function body enclosed in braces
   consume(TokenType::LEFT_BRACE);
   BlockItem *nextItem;
   while (token.type != TokenType::RIGHT_BRACE) {
-    nextItem = parseBlockItem();
-    if(nextItem == nullptr)break;
+    nextItem = parseBlockItem();  // Parse block items (statements, expressions)
+    if (nextItem == nullptr) break; // If no more block items are found, break
     stmts->addItem(std::unique_ptr<BlockItem>(nextItem));
   }
-  // stmts->addItem(std::unique_ptr<Stmt>(stmt));
-  // consume(TokenType::SEMICOLON);
-  consume(TokenType::RIGHT_BRACE);
-  // stmts->addItem(std::unique_ptr<BlockItem>(new ReturnStmt(std::make_unique<IntLiteral>(0))));
-  return new Func(name, std::move(stmts));
+  consume(TokenType::RIGHT_BRACE);  // Consume the closing brace
+
+  // Return a new function declaration object
+  return new FuncDecl(name, std::move(params), std::move(stmts));
 }
 
 
@@ -211,13 +230,23 @@ BlockItem *Parser::parseBlockItem() {
 }
 
 
-Decl *Parser::parseDeclaration() {
+Declaration *Parser::parseDeclaration() {
   consume(TokenType::INT); // Consume 'int' keyword
   expect(TokenType::ID);
   
   std::string varName = token.value.value();
   consume(TokenType::ID);
   
+  // Check if it's a function declaration
+  if (token.type == TokenType::LEFT_PAREN) {
+    return parseFuncDecl(varName);
+  }
+  
+  // Otherwise, it's a variable declaration
+  return parseVarDecl(varName);
+}
+
+VarDecl *Parser::parseVarDecl(const std::string &varName) {
   std::unique_ptr<Expr> initializer = nullptr;
   
   // Check for optional initialization (e.g., int x = 10;)
@@ -227,7 +256,36 @@ Decl *Parser::parseDeclaration() {
   }
   
   consume(TokenType::SEMICOLON); // Expect a semicolon at the end
-  return new Decl(varName, std::move(initializer));
+  return new VarDecl(varName, std::move(initializer));
+}
+
+FuncDecl *Parser::parseFuncDecl(const std::string &funcName) {
+  consume(TokenType::LEFT_PAREN);
+  
+  std::vector<std::string> params;
+  if (token.type != TokenType::RIGHT_PAREN) {
+    do {
+      consume(TokenType::INT);
+      expect(TokenType::ID);
+      std::string paramName = token.value.value();
+      consume(TokenType::ID);
+      params.push_back(paramName);
+    } while (token.type == TokenType::COMMA && (advance(), true));
+  }
+  
+  consume(TokenType::RIGHT_PAREN);
+  consume(TokenType::LEFT_BRACE);
+  
+  std::unique_ptr<Block> stmts = std::make_unique<Block>();
+  BlockItem *nextItem;
+  while (token.type != TokenType::RIGHT_BRACE) {
+    nextItem = parseBlockItem();
+    if (nextItem == nullptr) break;
+    stmts->addItem(std::unique_ptr<BlockItem>(nextItem));
+  }
+  consume(TokenType::RIGHT_BRACE);
+  
+  return new FuncDecl(funcName, std::move(params), std::move(stmts));
 }
 
 Stmt *Parser::parseStatement(){
@@ -278,7 +336,12 @@ Stmt *Parser::parseStatement(){
     // Parse init part which can be either a declaration or an expression statement
     std::unique_ptr<BlockItem> init;
     if (token.type == TokenType::INT) {
-      init.reset(parseDeclaration());
+      consume(TokenType::INT); // Consume 'int' keyword
+      expect(TokenType::ID);
+      
+      std::string varName = token.value.value();
+      consume(TokenType::ID);
+      init.reset(parseVarDecl(varName));
     } else {
       init.reset(parseExprStmt());
     }
@@ -434,6 +497,20 @@ Expr *Parser::parseFactor(){
   }else if(token.type == TokenType::ID){
     string name = token.value.value();
     consume(TokenType::ID);
+    
+    // Check if it's a function call
+    if (token.type == TokenType::LEFT_PAREN) {
+      consume(TokenType::LEFT_PAREN);
+      std::unique_ptr<ArgList> args = std::make_unique<ArgList>();
+      if (token.type != TokenType::RIGHT_PAREN) {
+      do {
+        args->addArg(std::unique_ptr<Expr>(parseExpr()));
+      } while (token.type == TokenType::COMMA && (advance(), true));
+      }
+      consume(TokenType::RIGHT_PAREN);
+      return new FuncCall(std::move(name), std::move(args));
+    }
+    
     return new Variable(name);
   }
   else{
