@@ -1,5 +1,5 @@
-int test(int x){
-    return x + 5;
+int test(int q){
+    return q + 5;
 }
 
 int main() {

@@ -4,39 +4,39 @@
 #include <fstream>
 #include <map>
 
-class TACtoASM{
+class TACtoASM {
     private:
         std::ofstream &outfile;
         int tempVarCounter = 0; // Track temporary registers (t0, t1, ...)
-        int argVarCounter = 0; // Track temporary registers (t0, t1, ...)
+        int argVarCounter = 0; // Track argument registers (a0, a1, ...)
         int stackOffset = 0;    // Track stack memory offset
         int stackSize = 64;     // Stack size for function prologue/epilogue
-
+    
         std::map<std::string, int> varMap; // Maps variables to stack offsets
         std::map<std::string, std::string> registerMap; // Maps temp vars to RISC-V registers
-
+    
         std::string getTempReg() {
             return "t" + std::to_string(tempVarCounter++ % 7); // Reuse t0-t6
         }
- 
+    
         std::string getArgReg() {
-            return "a" + std::to_string(argVarCounter++ % 7); // Reuse t0-t6
+            return "a" + std::to_string(argVarCounter++ % 7); // Reuse a0-a6
         }
-
+    
         std::string mapToRegister(const std::string &tempVar) {
             if (registerMap.find(tempVar) == registerMap.end()) {
                 registerMap[tempVar] = getTempReg();
             }
             return registerMap[tempVar];
         }
-
+    
         std::string mapToArgRegister(const std::string &tempVar) {
             if (registerMap.find(tempVar) == registerMap.end()) {
                 registerMap[tempVar] = getArgReg();
             }
             return registerMap[tempVar];
         }
-
+    
         void emitPrologue(int stackSize = 64) {
             outfile << "    addi sp, sp, -" << stackSize << "\n";
             outfile << "    sd ra, " << (stackSize - 8) << "(sp)\n";
@@ -51,23 +51,46 @@ class TACtoASM{
             outfile << "    addi sp, sp, " << stackSize << "\n";
             outfile << "    ret\n";
         }
-         
-
+    
     public:
-        TACtoASM(ofstream &file) : outfile(file) {}
+        TACtoASM(std::ofstream &file) : outfile(file) {}
+    
         void generateAssembly(const std::vector<TAC>& tacCode) {
             outfile << ".text\n";
             outfile << ".globl main\n";
             outfile << ".type main, @function\n";
-
-            // emitPrologue();
-
+    
+            // Iterate over the TAC code
             for (const auto& tac : tacCode) {
-                if (tac.op == "var") {
-                    // Allocate space for the variable
+                if (tac.op == "function") {
+                    // Each function call starts with its own stack and register space
+                    outfile << tac.arg1 << ":\n"; // Function label
+                    tempVarCounter = 0; // Reset temp registers for each function
+                    argVarCounter = 0; // Reset argument registers for each function
+                    varMap.clear(); // Clear the variable map for new function scope
+                    registerMap.clear(); // Clear the register map for new function scope
+    
+                    emitPrologue(); // Emit prologue for each function
+                } 
+                else if (tac.op == "RETURN") {
+                    // Handle return with a specific epilogue
+                    outfile << "    mv a0, " << mapToRegister(tac.arg1) << "\n";
+                    emitEpilogue();
+                }
+                else if (tac.op == "store") {
+                    // Store value to local stack space
                     if (varMap.find(tac.result) == varMap.end()) {
+                        stackOffset -= 8;  // Allocate if not already allocated
                         varMap[tac.result] = stackOffset;
-                        stackOffset -= 8; // Reserve 8 bytes for each variable
+                    }
+                    outfile << "    sd " << mapToRegister(tac.arg1) << ", "
+                            << varMap[tac.result] << "(s0)\n";
+                }
+                else if (tac.op == "load") {
+                    // Load value from local stack space
+                    if (varMap.find(tac.arg1) != varMap.end()) {
+                        int offset = varMap[tac.arg1];
+                        outfile << "    ld " << mapToRegister(tac.result) << ", " << offset << "(s0)\n";
                     }
                 }
                 else if (tac.op == "li") {
@@ -204,51 +227,26 @@ class TACtoASM{
                     // Move value
                     outfile << tac.arg1 << ":\n";
                 }
-                else if (tac.op == "function") {
-                    // Move value
-                    outfile << tac.arg1 << ":\n";
-                    tempVarCounter = 0;
-                    argVarCounter = 0;
-                    emitPrologue();
-                }
-                else if (tac.op == "store") {
-                    // Store value from register into memory
-                    if (varMap.find(tac.result) == varMap.end()) {
-                        stackOffset -= 8;  // Allocate if not already allocated
-                        varMap[tac.result] = stackOffset;
-                    }
-                    outfile << "    sd " << mapToRegister(tac.arg1) << ", " 
-                            << varMap[tac.result] << "(s0)\n";
-                }
-                else if (tac.op == "load") {
-                    // Load variable from memory
-                    if (varMap.find(tac.arg1) != varMap.end()) {
-                        int offset = varMap[tac.arg1];
-                        outfile << "    ld " << mapToRegister(tac.result) << ", " << offset << "(s0)\n";
-                    }
-                }
                 else if (tac.op == "call") {
                     // Call function
                     outfile << "    call " << tac.arg1 << "\n";
+                    
+                    if (!tac.result.empty()) {
+                        outfile << "    mv " << mapToRegister(tac.result) << ", a0\n";  // Store return value
+                    }
                 }
                 else if (tac.op == "arg") {
                     // Call function
-                    outfile << "    mv " << getArgReg() << ", " << tac.arg1 << "\n";
+                    outfile << "    mv " << getArgReg() << ", " << mapToRegister(tac.arg1) << "\n";
                 }
                 else if (tac.op == "param") {
                     // Store value from register into memory
                     if (varMap.find(tac.result) == varMap.end()) {
                         stackOffset -= 8;  // Allocate if not already allocated
-                        varMap[tac.result] = stackOffset;
+                        varMap[tac.arg1] = stackOffset;
                     }
                     outfile << "    sd " << mapToArgRegister(tac.arg1) << ", " 
-                            << varMap[tac.result] << "(s0)\n";
-                }
-                else if (tac.op == "RETURN") {
-                    // Return
-                    outfile << "    mv a0, " << mapToRegister(tac.arg1) << "\n";
-                    // outfile << "    ret\n";
-                    emitEpilogue();
+                            << varMap[tac.arg1] << "(s0)\n";
                 }
             }
         }
