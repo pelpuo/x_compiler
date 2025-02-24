@@ -24,12 +24,11 @@ main:
     sd t0, -24(s0)
     ld t1, -24(s0)
     ld t2, -24(s0)
-    mv a0, t2
-    call test
-    mv t3, a0
-    sd t3, -32(s0)
-    ld t4, -24(s0)
-    mv a0, t4
+    li t3, 5
+    add t4, t2, t3
+    sd t4, -32(s0)
+    ld t5, -24(s0)
+    mv a0, t5
     ld ra, 56(sp)
     ld s0, 48(sp)
     addi sp, sp, 64

@@ -8,7 +8,8 @@ int main() {
     //     x += i;
     // }
     // return x;
-    x = test(x);
+    // x = test(x);
+    x = x + 5;
     return x;
  }
  

@@ -339,6 +339,9 @@ class Assignment : public Expr {
     
     // Emit TAC for assignment
     code.push_back(TAC("store", valueTemp, "", nameTemp));
+
+    tempVar = valueTemp;
+    
     return code;
   }
 
