@@ -29,11 +29,11 @@ int main(int argc, char ** argv){
 
     // tokenize(contents);
     Lexer lexer(contents);
-    // while(*lexer.BufferPtr){
-    //     Token token;
-    //     lexer.next(token);
-    //     cout << TokenStr[token.type] << ": " << token.value.value_or("") << endl;
-    // }
+    while(*lexer.BufferPtr){
+        Token token;
+        lexer.next(token);
+        cout << TokenStr[token.type] << ": " << token.value.value_or("") << endl;
+    }
 
     Parser parser(lexer);
     ASTProgram *prog = parser.parse();

@@ -140,6 +140,7 @@ class TACtoASM {
                         outfile << "    sub " << dst << ", " << reg1 << ", " << reg2 << "\n";
                     }
                 }
+
                 else if (tac.op == "*") {
                     // Multiplication
                     std::string reg1 = ensureLoaded(tac.arg1);
