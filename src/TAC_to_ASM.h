@@ -64,6 +64,11 @@ class TACtoASM {
             return reg;
         }
 
+        bool isImmediate(const std::string &s) {
+            if (s.empty()) return false;
+            if (isdigit(s[0]) || (s[0] == '-' && isdigit(s[1]))) return true;
+            return false;
+        }
 
     
     public:
@@ -88,7 +93,7 @@ class TACtoASM {
                 } 
                 else if (tac.op == "RETURN") {
                     // Handle return with a specific epilogue
-                    outfile << "    mv a0, " << mapToRegister(tac.arg1) << "\n";
+                    outfile << "    mv a0, " << ensureLoaded(tac.arg1) << "\n";
                     emitEpilogue();
                 }
                 else if (tac.op == "store") {
@@ -112,20 +117,28 @@ class TACtoASM {
                     outfile << "    li " << mapToRegister(tac.result) << ", " << tac.arg1 << "\n";
                 }
                 else if (tac.op == "+") {
-                    // Addition
-                    // outfile << "    add " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg1) << ", " << mapToRegister(tac.arg2) << "\n";
                     std::string reg1 = ensureLoaded(tac.arg1);
-                    std::string reg2 = ensureLoaded(tac.arg2);
                     std::string dst  = mapToRegister(tac.result);
-                    outfile << "    add " << dst << ", " << reg1 << ", " << reg2 << "\n";
 
+                    if (isImmediate(tac.arg2)) {
+                        outfile << "    addi " << dst << ", " << reg1 << ", " << tac.arg2 << "\n";
+                    } else {
+                        std::string reg2 = ensureLoaded(tac.arg2);
+                        outfile << "    add " << dst << ", " << reg1 << ", " << reg2 << "\n";
+                    }
                 }
                 else if (tac.op == "-") {
-                    // Subtraction
                     std::string reg1 = ensureLoaded(tac.arg1);
-                    std::string reg2 = ensureLoaded(tac.arg2);
                     std::string dst  = mapToRegister(tac.result);
-                    outfile << "    sub " << dst << ", " << reg1 << ", " << reg2 << "\n";
+
+                    if (isImmediate(tac.arg2)) {
+                        // Emit: dst = reg1 + (-imm)
+                        int imm = std::stoi(tac.arg2);
+                        outfile << "    addi " << dst << ", " << reg1 << ", " << -imm << "\n";
+                    } else {
+                        std::string reg2 = ensureLoaded(tac.arg2);
+                        outfile << "    sub " << dst << ", " << reg1 << ", " << reg2 << "\n";
+                    }
                 }
                 else if (tac.op == "*") {
                     // Multiplication
@@ -231,6 +244,17 @@ class TACtoASM {
                 else if (tac.op == "~") {
                     // Move value
                     outfile << "    not " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg1) << "\n";
+                }
+                else if (tac.op == "=") {
+                    // Assignment: y = t1
+                    std::string srcReg = ensureLoaded(tac.arg1);
+
+                    if (varMap.find(tac.result) == varMap.end()) {
+                        stackOffset -= 8;  // Allocate new stack slot
+                        varMap[tac.result] = stackOffset;
+                    }
+
+                    outfile << "    sd " << srcReg << ", " << varMap[tac.result] << "(s0)\n";
                 }
                 else if (tac.op == "seq") {
                     // Move value

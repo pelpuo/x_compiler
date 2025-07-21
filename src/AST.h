@@ -266,43 +266,67 @@ public:
 class UnaryOp : public Expr {
 public:
   TokenType op;
-  std::unique_ptr<Expr> expr;
-  UnaryOp(TokenType op, std::unique_ptr<Expr> expr)
-      : op(op), expr(std::move(expr)) {}
+  std::unique_ptr<Expr> operand;
+  bool isPostfix; // [++ support]
+  // UnaryOp(TokenType op, std::unique_ptr<Expr> expr)
+  //     : op(op), expr(std::move(expr)) {}
+  public:
+  UnaryOp(TokenType op, std::unique_ptr<Expr> operand, bool isPostfix = false)
+    : op(op), operand(std::move(operand)), isPostfix(isPostfix) {} // [++ support]
 
   void print(){
     cout << "UnaryOp: " << TokenStr[(int)op] << " ";
-    expr->print();
+    operand->print();
   }
 
-  std::vector<TAC> generateTAC(std::string &tempVar) override {
+std::vector<TAC> generateTAC(std::string &tempVar) override {
     std::vector<TAC> code;
     std::string exprTemp;
 
     // Generate TAC for the operand
-    auto exprCode = expr->generateTAC(exprTemp);
+    auto exprCode = operand->generateTAC(exprTemp);
     code.insert(code.end(), exprCode.begin(), exprCode.end());
 
-    // Create a new temporary variable
-    tempVar = "t" + std::to_string(tempVarCounter++);
+    if (op == TokenType::INCREMENT || op == TokenType::DECREMENT) {
+        std::string one = "1";
+        std::string newTemp = "t" + std::to_string(tempVarCounter++);
+        std::string opStr = (op == TokenType::INCREMENT) ? "+" : "-";
 
-    // Map TokenType to TAC operation
+        // Apply increment or decrement: newTemp = exprTemp ± 1
+        code.emplace_back(opStr, exprTemp, one, newTemp);
+
+        // Store result back to the original location
+        Variable *var = dynamic_cast<Variable *>(operand.get());
+        if (!var) {
+          std::cerr << "ERROR: ++/-- operand must be a variable" << std::endl;
+          exit(1);
+        }
+        code.emplace_back("store", newTemp, "", var->name);
+
+
+        // Result depends on whether it's prefix or postfix
+        tempVar = isPostfix ? exprTemp : newTemp;
+        return code;
+    }
+
+    // Regular unary operations
+    tempVar = "t" + std::to_string(tempVarCounter++);
     std::string opStr;
     if (op == TokenType::MINUS) opStr = "NEG";
     else if (op == TokenType::COMPLEMENT) opStr = "~";
     else if (op == TokenType::LOGICAL_NOT) {
-      opStr = "seq";  // Set equal to zero
-      code.push_back(TAC(opStr, exprTemp, "0", tempVar));
-      return code;
-  }
-    // Emit TAC for unary operation
-    code.push_back(TAC(opStr, exprTemp, "", tempVar));
+        opStr = "seq";
+        code.emplace_back(opStr, exprTemp, "0", tempVar);
+        return code;
+    }
 
+    code.emplace_back(opStr, exprTemp, "", tempVar);
     return code;
-  }
+}
+
 
   void resolveSymbol(SymbolTable &symTab) override {
-    expr->resolveSymbol(symTab);
+    operand->resolveSymbol(symTab);
   }
 };
 // Initialize static member
@@ -624,6 +648,13 @@ public:
       // Generate TAC for the expression
       auto exprCode = expr->generateTAC(tempVar);
       code.insert(code.end(), exprCode.begin(), exprCode.end());
+    
+      // Suppress the EXPR line if it's a standalone postfix ++/-- expression
+      if (auto *unOp = dynamic_cast<UnaryOp *>(expr.get())) {
+          if (unOp->op == TokenType::INCREMENT || unOp->op == TokenType::DECREMENT) {
+              return code;  // Don't emit EXPR for side-effect-only statements
+          }
+      }
 
       code.push_back(TAC("EXPR", tempVar, "", ""));
       return code;
@@ -1266,11 +1297,16 @@ public:
 class ASTProgram : public AST {
 public:
   std::vector<std::unique_ptr<FuncDecl>> functions;
+  std::vector<std::unique_ptr<FuncDecl>> prototypes;
 
   void addFunction(std::unique_ptr<FuncDecl> func) {
     functions.push_back(std::move(func));
   }
 
+  void addPrototype(std::unique_ptr<FuncDecl> proto) {
+    prototypes.push_back(std::move(proto));
+  }
+  
   void print() {
     for (auto &func : functions) {
       func->print();

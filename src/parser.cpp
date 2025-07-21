@@ -441,13 +441,16 @@ Expr *Parser::parseExpr(int minPrec)
 
   if(token.type == TokenType::LOGICAL_NOT 
     || token.type == TokenType::MINUS 
-    || token.type == TokenType::COMPLEMENT){
+    || token.type == TokenType::COMPLEMENT
+    || token.type == TokenType::INCREMENT    // [++ support]
+    || token.type == TokenType::DECREMENT)   // [++ support]
+  {
     TokenType op = token.type;
     int prec = getPrecedence(op);
     advance();
-    Expr *right = parseExpr(getPrecedence(op)+1);
-    left = new UnaryOp(op, std::unique_ptr<Expr>(right));
-  }else{
+    Expr *right = parseExpr(prec + 1);
+    left = new UnaryOp(op, std::unique_ptr<Expr>(right), false); // isPostfix = false // [++ support]
+}else{
     left = parseFactor();
   }
 
@@ -484,38 +487,51 @@ Expr *Parser::parseTerm()
 }
 
 Expr *Parser::parseFactor(){
-  if(token.type == TokenType::NUM){
-    string tokentext = token.value.value();
-    consume(TokenType::NUM);
-    return new IntLiteral(stoi(tokentext));
-  }
-  else if(token.type == TokenType::LEFT_PAREN){
+Expr *base;
+
+if(token.type == TokenType::NUM){
+  string tokentext = token.value.value();
+  consume(TokenType::NUM);
+  base = new IntLiteral(stoi(tokentext));
+}
+else if(token.type == TokenType::LEFT_PAREN){
+  consume(TokenType::LEFT_PAREN);
+  base = parseExpr();
+  consume(TokenType::RIGHT_PAREN);
+}
+else if(token.type == TokenType::ID){
+  string name = token.value.value();
+  consume(TokenType::ID);
+  
+  // Function call
+  if (token.type == TokenType::LEFT_PAREN) {
     consume(TokenType::LEFT_PAREN);
-    Expr *expr = parseExpr();
-    consume(TokenType::RIGHT_PAREN);
-    return expr;
-  }else if(token.type == TokenType::ID){
-    string name = token.value.value();
-    consume(TokenType::ID);
-    
-    // Check if it's a function call
-    if (token.type == TokenType::LEFT_PAREN) {
-      consume(TokenType::LEFT_PAREN);
-      std::unique_ptr<ArgList> args = std::make_unique<ArgList>();
-      if (token.type != TokenType::RIGHT_PAREN) {
+    std::unique_ptr<ArgList> args = std::make_unique<ArgList>();
+    if (token.type != TokenType::RIGHT_PAREN) {
       do {
         args->addArg(std::unique_ptr<Expr>(parseExpr()));
       } while (token.type == TokenType::COMMA && (advance(), true));
-      }
-      consume(TokenType::RIGHT_PAREN);
-      return new FuncCall(std::move(name), std::move(args));
     }
-    
-    return new Variable(name);
+    consume(TokenType::RIGHT_PAREN);
+    base = new FuncCall(std::move(name), std::move(args));
+  } else {
+    base = new Variable(name);
   }
-  else{
-    error();
-  }
+}
+else {
+  error();
+  return nullptr; // [added to prevent control reaching end of non-void]
+}
+
+// Handle postfix ++ or --
+while (token.type == TokenType::INCREMENT || token.type == TokenType::DECREMENT) { // [++ support]
+  TokenType op = token.type;
+  advance();
+  base = new UnaryOp(op, std::unique_ptr<Expr>(base), true); // isPostfix = true // [++ support]
+}
+
+return base; // [++ support]
+
 
 }
 
