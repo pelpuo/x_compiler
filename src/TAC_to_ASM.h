@@ -51,6 +51,20 @@ class TACtoASM {
             outfile << "    addi sp, sp, " << stackSize << "\n";
             outfile << "    ret\n";
         }
+
+        bool isVariable(const std::string &name) {
+            return !(name.size() >= 2 && name[0] == 't' && isdigit(name[1]));
+        }
+
+        std::string ensureLoaded(const std::string &name) {
+            std::string reg = mapToRegister(name);
+            if (isVariable(name) && varMap.find(name) != varMap.end()) {
+                outfile << "    ld " << reg << ", " << varMap[name] << "(s0)\n";
+            }
+            return reg;
+        }
+
+
     
     public:
         TACtoASM(std::ofstream &file) : outfile(file) {}
@@ -99,51 +113,90 @@ class TACtoASM {
                 }
                 else if (tac.op == "+") {
                     // Addition
-                    outfile << "    add " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg1) << ", " << mapToRegister(tac.arg2) << "\n";
+                    // outfile << "    add " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg1) << ", " << mapToRegister(tac.arg2) << "\n";
+                    std::string reg1 = ensureLoaded(tac.arg1);
+                    std::string reg2 = ensureLoaded(tac.arg2);
+                    std::string dst  = mapToRegister(tac.result);
+                    outfile << "    add " << dst << ", " << reg1 << ", " << reg2 << "\n";
+
                 }
                 else if (tac.op == "-") {
                     // Subtraction
-                    outfile << "    sub " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg1) << ", " << mapToRegister(tac.arg2) << "\n";
+                    std::string reg1 = ensureLoaded(tac.arg1);
+                    std::string reg2 = ensureLoaded(tac.arg2);
+                    std::string dst  = mapToRegister(tac.result);
+                    outfile << "    sub " << dst << ", " << reg1 << ", " << reg2 << "\n";
                 }
                 else if (tac.op == "*") {
                     // Multiplication
-                    outfile << "    mul " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg1) << ", " << mapToRegister(tac.arg2) << "\n";
+                    std::string reg1 = ensureLoaded(tac.arg1);
+                    std::string reg2 = ensureLoaded(tac.arg2);
+                    std::string dst  = mapToRegister(tac.result);
+                    outfile << "    mul " << dst << ", " << reg1 << ", " << reg2 << "\n";
+
                 }
                 else if (tac.op == "/") {
                     // Division
-                    outfile << "    div " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg1) << ", " << mapToRegister(tac.arg2) << "\n";
+                    std::string reg1 = ensureLoaded(tac.arg1);
+                    std::string reg2 = ensureLoaded(tac.arg2);
+                    std::string dst  = mapToRegister(tac.result);
+                    outfile << "    div " << dst << ", " << reg1 << ", " << reg2 << "\n";
                 }
                 else if (tac.op == "%") {
                     // Division
-                    outfile << "    rem " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg1) << ", " << mapToRegister(tac.arg2) << "\n";
+                    std::string reg1 = ensureLoaded(tac.arg1);
+                    std::string reg2 = ensureLoaded(tac.arg2);
+                    std::string dst  = mapToRegister(tac.result);
+                    outfile << "    rem " << dst << ", " << reg1 << ", " << reg2 << "\n";
                 }
                 else if (tac.op == "&") {
                     // Division
-                    outfile << "    and " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg1) << ", " << mapToRegister(tac.arg2) << "\n";
+                    std::string reg1 = ensureLoaded(tac.arg1);
+                    std::string reg2 = ensureLoaded(tac.arg2);
+                    std::string dst  = mapToRegister(tac.result);
+                    outfile << "    and " << dst << ", " << reg1 << ", " << reg2 << "\n";
                 }
                 else if (tac.op == "|") {
                     // Division
-                    outfile << "    or " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg1) << ", " << mapToRegister(tac.arg2) << "\n";
+                    std::string reg1 = ensureLoaded(tac.arg1);
+                    std::string reg2 = ensureLoaded(tac.arg2);
+                    std::string dst  = mapToRegister(tac.result);
+                    outfile << "    or " << dst << ", " << reg1 << ", " << reg2 << "\n";
                 }
                 else if (tac.op == "^") {
                     // Division
-                    outfile << "    xor " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg1) << ", " << mapToRegister(tac.arg2) << "\n";
+                    std::string reg1 = ensureLoaded(tac.arg1);
+                    std::string reg2 = ensureLoaded(tac.arg2);
+                    std::string dst  = mapToRegister(tac.result);
+                    outfile << "    xor " << dst << ", " << reg1 << ", " << reg2 << "\n";
                 }
                 else if (tac.op == "<<") {
                     // Division
-                    outfile << "    sll " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg1) << ", " << mapToRegister(tac.arg2) << "\n";
+                    std::string reg1 = ensureLoaded(tac.arg1);
+                    std::string reg2 = ensureLoaded(tac.arg2);
+                    std::string dst  = mapToRegister(tac.result);
+                    outfile << "    sll " << dst << ", " << reg1 << ", " << reg2 << "\n";
                 }
                 else if (tac.op == ">>") {
                     // Division
-                    outfile << "    srl " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg1) << ", " << mapToRegister(tac.arg2) << "\n";
+                    std::string reg1 = ensureLoaded(tac.arg1);
+                    std::string reg2 = ensureLoaded(tac.arg2);
+                    std::string dst  = mapToRegister(tac.result);
+                    outfile << "    srl " << dst << ", " << reg1 << ", " << reg2 << "\n";
                 }
                 else if (tac.op == "&&") {
                     // Division
-                    outfile << "    and " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg1) << ", " << mapToRegister(tac.arg2) << "\n";
+                    std::string reg1 = ensureLoaded(tac.arg1);
+                    std::string reg2 = ensureLoaded(tac.arg2);
+                    std::string dst  = mapToRegister(tac.result);
+                    outfile << "    and " << dst << ", " << reg1 << ", " << reg2 << "\n";
                 }
                 else if (tac.op == "||") {
                     // Division
-                    outfile << "    or " << mapToRegister(tac.result) << ", " << mapToRegister(tac.arg1) << ", " << mapToRegister(tac.arg2) << "\n";
+                    std::string reg1 = ensureLoaded(tac.arg1);
+                    std::string reg2 = ensureLoaded(tac.arg2);
+                    std::string dst  = mapToRegister(tac.result);
+                    outfile << "    or " << dst << ", " << reg1 << ", " << reg2 << "\n";
                 }
                 else if (tac.op == "==") {
                     // Division

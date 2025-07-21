@@ -328,10 +328,14 @@ class Assignment : public Expr {
   std::vector<TAC> generateTAC(std::string &tempVar) override {
     std::vector<TAC> code;
     std::string nameTemp, valueTemp;
-    
-    // Generate TAC for the name
-    auto nameCode = name->generateTAC(nameTemp);
-    code.insert(code.end(), nameCode.begin(), nameCode.end());
+
+    // FIX: Don't generate TAC for the LHS as an rvalue
+    Variable *var = dynamic_cast<Variable *>(name.get());
+    if (!var) {
+      std::cerr << "ERROR: LHS of assignment must be a variable" << std::endl;
+      exit(1);
+    }
+    nameTemp = var->name;  // Just use the variable name
     
     // Generate TAC for the value
     auto valueCode = value->generateTAC(valueTemp);
@@ -375,9 +379,17 @@ class CompoundAssignment : public Expr {
       std::string nameTemp, valueTemp, resultTemp;
   
       // Generate TAC for the name
-      auto nameCode = left->generateTAC(nameTemp);
-      code.insert(code.end(), nameCode.begin(), nameCode.end());
+      // auto nameCode = left->generateTAC(nameTemp);
+      // code.insert(code.end(), nameCode.begin(), nameCode.end());
   
+      Variable *var = dynamic_cast<Variable *>(left.get());
+      if (!var) {
+        std::cerr << "ERROR: Left-hand side of compound assignment must be a variable" << std::endl;
+        exit(1);
+      }
+      nameTemp = var->name;  // Use actual variable name
+
+
       // Generate TAC for the value
       auto valueCode = right->generateTAC(valueTemp);
       code.insert(code.end(), valueCode.begin(), valueCode.end());

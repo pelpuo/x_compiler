@@ -1,6 +1,8 @@
 file(REMOVE_RECURSE
   "CMakeFiles/comp.dir/src/AST.cpp.o"
   "CMakeFiles/comp.dir/src/AST.cpp.o.d"
+  "CMakeFiles/comp.dir/src/TAC_to_ASM.cpp.o"
+  "CMakeFiles/comp.dir/src/TAC_to_ASM.cpp.o.d"
   "CMakeFiles/comp.dir/src/codeGen.cpp.o"
   "CMakeFiles/comp.dir/src/codeGen.cpp.o.d"
   "CMakeFiles/comp.dir/src/lexer.cpp.o"

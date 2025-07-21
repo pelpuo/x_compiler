@@ -1,6 +1,7 @@
 CMakeFiles/comp.dir/src/codeGen.cpp.o: \
- /home/panda/Documents/compiler/src/codeGen.cpp \
- /usr/include/stdc-predef.h /home/panda/Documents/compiler/src/codeGen.h \
+ /home/panda/Documents/Github/micomp/src/codeGen.cpp \
+ /usr/include/stdc-predef.h \
+ /home/panda/Documents/Github/micomp/src/codeGen.h \
  /usr/include/c++/11/iostream \
  /usr/include/x86_64-linux-gnu/c++/11/bits/c++config.h \
  /usr/include/x86_64-linux-gnu/c++/11/bits/os_defines.h \
@@ -174,11 +175,12 @@ CMakeFiles/comp.dir/src/codeGen.cpp.o: \
  /usr/include/x86_64-linux-gnu/c++/11/bits/basic_file.h \
  /usr/include/x86_64-linux-gnu/c++/11/bits/c++io.h \
  /usr/include/c++/11/bits/fstream.tcc \
- /home/panda/Documents/compiler/src/AST.h \
- /home/panda/Documents/compiler/src/lexer.h /usr/include/c++/11/optional \
+ /home/panda/Documents/Github/micomp/src/AST.h \
+ /home/panda/Documents/Github/micomp/src/lexer.h \
+ /usr/include/c++/11/optional \
  /usr/include/c++/11/bits/enable_special_members.h \
- /home/panda/Documents/compiler/src/TAC.h \
- /home/panda/Documents/compiler/src/SymbolTable.h \
+ /home/panda/Documents/Github/micomp/src/TAC.h \
+ /home/panda/Documents/Github/micomp/src/SymbolTable.h \
  /usr/include/c++/11/unordered_map /usr/include/c++/11/bits/hashtable.h \
  /usr/include/c++/11/bits/hashtable_policy.h \
  /usr/include/c++/11/bits/node_handle.h \

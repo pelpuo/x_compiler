@@ -228,6 +228,9 @@ CMakeFiles/comp.dir/src/AST.cpp.o: src/AST.cpp \
   /usr/include/c++/11/bits/unordered_map.h \
   /usr/include/c++/11/bits/erase_if.h
 
+CMakeFiles/comp.dir/src/TAC_to_ASM.cpp.o: src/TAC_to_ASM.cpp \
+  /usr/include/stdc-predef.h
+
 CMakeFiles/comp.dir/src/codeGen.cpp.o: src/codeGen.cpp \
   /usr/include/stdc-predef.h \
   src/codeGen.h \
@@ -1489,6 +1492,8 @@ src/lexer.cpp:
 /usr/include/c++/11/unordered_map:
 
 /usr/include/c++/11/cctype:
+
+src/TAC_to_ASM.cpp:
 
 /usr/include/x86_64-linux-gnu/sys/select.h:
 

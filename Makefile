@@ -57,10 +57,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/panda/Documents/compiler
+CMAKE_SOURCE_DIR = /home/panda/Documents/Github/micomp
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/panda/Documents/compiler
+CMAKE_BINARY_DIR = /home/panda/Documents/Github/micomp
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -87,9 +87,9 @@ rebuild_cache/fast: rebuild_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/panda/Documents/compiler/CMakeFiles /home/panda/Documents/compiler//CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/panda/Documents/Github/micomp/CMakeFiles /home/panda/Documents/Github/micomp//CMakeFiles/progress.marks
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/panda/Documents/compiler/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/panda/Documents/Github/micomp/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -152,6 +152,30 @@ src/AST.s: src/AST.cpp.s
 src/AST.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/comp.dir/build.make CMakeFiles/comp.dir/src/AST.cpp.s
 .PHONY : src/AST.cpp.s
+
+src/TAC_to_ASM.o: src/TAC_to_ASM.cpp.o
+.PHONY : src/TAC_to_ASM.o
+
+# target to build an object file
+src/TAC_to_ASM.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/comp.dir/build.make CMakeFiles/comp.dir/src/TAC_to_ASM.cpp.o
+.PHONY : src/TAC_to_ASM.cpp.o
+
+src/TAC_to_ASM.i: src/TAC_to_ASM.cpp.i
+.PHONY : src/TAC_to_ASM.i
+
+# target to preprocess a source file
+src/TAC_to_ASM.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/comp.dir/build.make CMakeFiles/comp.dir/src/TAC_to_ASM.cpp.i
+.PHONY : src/TAC_to_ASM.cpp.i
+
+src/TAC_to_ASM.s: src/TAC_to_ASM.cpp.s
+.PHONY : src/TAC_to_ASM.s
+
+# target to generate assembly for a file
+src/TAC_to_ASM.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/comp.dir/build.make CMakeFiles/comp.dir/src/TAC_to_ASM.cpp.s
+.PHONY : src/TAC_to_ASM.cpp.s
 
 src/codeGen.o: src/codeGen.cpp.o
 .PHONY : src/codeGen.o
@@ -261,6 +285,9 @@ help:
 	@echo "... src/AST.o"
 	@echo "... src/AST.i"
 	@echo "... src/AST.s"
+	@echo "... src/TAC_to_ASM.o"
+	@echo "... src/TAC_to_ASM.i"
+	@echo "... src/TAC_to_ASM.s"
 	@echo "... src/codeGen.o"
 	@echo "... src/codeGen.i"
 	@echo "... src/codeGen.s"

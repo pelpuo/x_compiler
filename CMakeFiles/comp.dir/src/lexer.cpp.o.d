@@ -1,6 +1,8 @@
 CMakeFiles/comp.dir/src/lexer.cpp.o: \
- /home/panda/Documents/compiler/src/lexer.cpp /usr/include/stdc-predef.h \
- /home/panda/Documents/compiler/src/lexer.h /usr/include/c++/11/string \
+ /home/panda/Documents/Github/micomp/src/lexer.cpp \
+ /usr/include/stdc-predef.h \
+ /home/panda/Documents/Github/micomp/src/lexer.h \
+ /usr/include/c++/11/string \
  /usr/include/x86_64-linux-gnu/c++/11/bits/c++config.h \
  /usr/include/x86_64-linux-gnu/c++/11/bits/os_defines.h \
  /usr/include/features.h /usr/include/features-time64.h \

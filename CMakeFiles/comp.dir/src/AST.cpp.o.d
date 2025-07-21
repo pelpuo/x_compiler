@@ -1,7 +1,8 @@
 CMakeFiles/comp.dir/src/AST.cpp.o: \
- /home/panda/Documents/compiler/src/AST.cpp /usr/include/stdc-predef.h \
- /home/panda/Documents/compiler/src/AST.h \
- /home/panda/Documents/compiler/src/lexer.h /usr/include/c++/11/string \
+ /home/panda/Documents/Github/micomp/src/AST.cpp \
+ /usr/include/stdc-predef.h /home/panda/Documents/Github/micomp/src/AST.h \
+ /home/panda/Documents/Github/micomp/src/lexer.h \
+ /usr/include/c++/11/string \
  /usr/include/x86_64-linux-gnu/c++/11/bits/c++config.h \
  /usr/include/x86_64-linux-gnu/c++/11/bits/os_defines.h \
  /usr/include/features.h /usr/include/features-time64.h \
@@ -138,9 +139,9 @@ CMakeFiles/comp.dir/src/AST.cpp.o: \
  /usr/include/c++/11/bits/stl_vector.h \
  /usr/include/c++/11/bits/stl_bvector.h \
  /usr/include/c++/11/bits/vector.tcc \
- /home/panda/Documents/compiler/src/TAC.h /usr/include/c++/11/iostream \
- /usr/include/c++/11/ostream /usr/include/c++/11/ios \
- /usr/include/c++/11/bits/ios_base.h \
+ /home/panda/Documents/Github/micomp/src/TAC.h \
+ /usr/include/c++/11/iostream /usr/include/c++/11/ostream \
+ /usr/include/c++/11/ios /usr/include/c++/11/bits/ios_base.h \
  /usr/include/c++/11/bits/locale_classes.h \
  /usr/include/c++/11/bits/locale_classes.tcc \
  /usr/include/c++/11/system_error \
@@ -179,7 +180,7 @@ CMakeFiles/comp.dir/src/AST.cpp.o: \
  /usr/include/x86_64-linux-gnu/c++/11/bits/basic_file.h \
  /usr/include/x86_64-linux-gnu/c++/11/bits/c++io.h \
  /usr/include/c++/11/bits/fstream.tcc \
- /home/panda/Documents/compiler/src/SymbolTable.h \
+ /home/panda/Documents/Github/micomp/src/SymbolTable.h \
  /usr/include/c++/11/unordered_map /usr/include/c++/11/bits/hashtable.h \
  /usr/include/c++/11/bits/hashtable_policy.h \
  /usr/include/c++/11/bits/node_handle.h \
