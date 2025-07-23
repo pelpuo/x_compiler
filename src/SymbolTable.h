@@ -1,30 +1,3 @@
-// #include <unordered_map>
-// #include <string>
-// #include <vector>
-
-// class SymbolTable {
-//     std::vector<std::unordered_map<std::string, bool>> scopes;
-
-// public:
-//     void enterScope() { scopes.emplace_back(); }
-
-//     void exitScope() { scopes.pop_back(); }
-
-//     bool declare(const std::string &name) {
-//         if (scopes.back().count(name)) return false; // Duplicate variable in the same scope
-//         scopes.back()[name] = true;
-//         return true;
-//     }
-
-//     bool resolve(const std::string &name) {
-//         for (auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
-//             if (it->count(name)) return true; // Variable found in an outer scope
-//         }
-//         return false; // Undeclared variable
-//     }
-// };
-
-
 #include <unordered_map>
 #include <string>
 #include <vector>
@@ -36,6 +9,7 @@ enum class SymbolType { VARIABLE, FUNCTION };
 struct SymbolInfo {
     SymbolType type;
     std::vector<std::string> params; // Used only for functions
+    bool isDefined = false; // Used to check if a function is defined
 };
 
 class SymbolTable {
@@ -62,11 +36,41 @@ public:
         return true;
     }
 
-    bool declareFunction(const std::string &name, const std::vector<std::string> &params) {
-        if (globalScope.count(name)) return false; // Function already declared
-        globalScope[name] = {SymbolType::FUNCTION, params};
+    // bool declareFunction(const std::string &name, const std::vector<std::string> &params) {
+    //     if (globalScope.count(name)) return false; // Function already declared
+    //     globalScope[name] = {SymbolType::FUNCTION, params};
+    //     return true;
+    // }
+
+    bool declareFunction(const std::string &name, const std::vector<std::string> &params, bool hasBody) {
+        auto it = globalScope.find(name);
+
+        if (it != globalScope.end()) {
+            SymbolInfo &info = it->second;
+
+            if (info.type != SymbolType::FUNCTION) return false;
+
+            if (info.params.size() != params.size()) {
+                std::cerr << "ERROR: Conflicting declaration of function '" << name << "'" << std::endl;
+                return false;
+            }
+
+            if (hasBody) {
+                if (info.isDefined) {
+                    std::cerr << "ERROR: Multiple definitions of function '" << name << "'" << std::endl;
+                    return false;
+                }
+                info.isDefined = true; // Mark as now defined
+            }
+
+            return true; // Redeclaration allowed (matching prototype)
+        }
+
+        // First time seeing this function
+        globalScope[name] = {SymbolType::FUNCTION, params, hasBody};
         return true;
     }
+
 
     // Retrieve function parameters
     std::optional<std::vector<std::string>> getFunctionParams(const std::string &name) {

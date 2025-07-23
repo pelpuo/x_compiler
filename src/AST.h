@@ -12,6 +12,7 @@ class AST;
 class Expr;
 class Factor;
 class BinaryOp;
+class UnaryOp;
 class WithDecl;
 
 using namespace std;
@@ -24,6 +25,7 @@ public:
   virtual void visit(Expr &) {};
   virtual void visit(Factor &) = 0;
   virtual void visit(BinaryOp &) = 0;
+  virtual void visit(UnaryOp &) = 0;
   virtual void visit(WithDecl &) = 0;
 };
 
@@ -1235,7 +1237,7 @@ public:
 
   void resolveSymbol(SymbolTable &symTab) override {
     // Ensure the function name is uniquely declared
-    if (!symTab.declareFunction(name, params)) {
+    if (!symTab.declareFunction(name, params, body != nullptr)) {
         std::cerr << "ERROR: Redeclaration of function '" << name << "'" << std::endl;
         exit(1);
     }
@@ -1308,9 +1310,8 @@ public:
   }
   
   void print() {
-    for (auto &func : functions) {
-      func->print();
-    }
+    for (auto &proto : prototypes) proto->print();
+    for (auto &func : functions)func->print();
   }
 
   std::vector<TAC> generateTAC(std::string &tempVar) override {
@@ -1325,9 +1326,10 @@ public:
 
   void resolveSymbol(SymbolTable &symTab) override {
     symTab.enterScope();
-    for (auto &func : functions) {
+    for (auto &proto : prototypes)
+      proto->resolveSymbol(symTab); // Only declares symbol
+    for (auto &func : functions)
       func->resolveSymbol(symTab);
-    }
     symTab.exitScope();
   }
 };

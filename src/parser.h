@@ -30,6 +30,7 @@ class Parser{
         Declaration *parseDeclaration();
         VarDecl *parseVarDecl(const string &varName);
         FuncDecl *parseFuncDecl(const string &funcName);
+        FuncDecl *parseFuncDeclOrProto(const string &funcName);
         ExprStmt *parseExprStmt();
         
     public:

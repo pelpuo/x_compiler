@@ -155,14 +155,32 @@ ASTProgram *Parser::parseProgram() {
   FuncDecl *func;
 
   // Parse functions until we reach end-of-input (EOI)
-  while ((func = parseFunction())) {
-    program->addFunction(std::unique_ptr<FuncDecl>(func));
+  // while ((func = parseFunction())) {
+  //   if (func->body)
+  //     program->addFunction(std::unique_ptr<FuncDecl>(func));
+  //   else
+  //     program->addPrototype(std::unique_ptr<FuncDecl>(func));
 
-    // If we encounter an EOI (End of Input), stop parsing
-    if (token.type == TokenType::EOI) {
-      return program;
+
+  //   // If we encounter an EOI (End of Input), stop parsing
+  //   if (token.type == TokenType::EOI) {
+  //     return program;
+  //   }
+  // }
+
+  while (token.type == TokenType::INT) {
+    Declaration *decl = parseDeclaration();
+    FuncDecl *func = dynamic_cast<FuncDecl *>(decl);
+    if (!func) {
+      std::cerr << "ERROR: Top-level declarations must be functions\n";
+      exit(1);
     }
-  }
+    if (func->body)
+      program->addFunction(std::unique_ptr<FuncDecl>(func));
+    else
+      program->addPrototype(std::unique_ptr<FuncDecl>(func));
+}
+
 
   // Optionally, you can handle cases where there are no functions here.
   // E.g., if we reach this point without parsing any functions, we could throw
@@ -231,7 +249,7 @@ Declaration *Parser::parseDeclaration() {
 
   // Check if it's a function declaration
   if (token.type == TokenType::LEFT_PAREN) {
-    return parseFuncDecl(varName);
+    return parseFuncDeclOrProto(varName);
   }
 
   // Otherwise, it's a variable declaration
@@ -249,6 +267,46 @@ VarDecl *Parser::parseVarDecl(const std::string &varName) {
 
   consume(TokenType::SEMICOLON); // Expect a semicolon at the end
   return new VarDecl(varName, std::move(initializer));
+}
+
+
+FuncDecl *Parser::parseFuncDeclOrProto(const std::string &funcName) {
+  consume(TokenType::LEFT_PAREN);
+
+  std::vector<std::string> params;
+  if (token.type != TokenType::RIGHT_PAREN) {
+    do {
+      consume(TokenType::INT);
+      expect(TokenType::ID);
+      std::string paramName = token.value.value();
+      // consume(TokenType::ID);
+      advance(); // Consume the ID token
+      params.push_back(paramName);
+    } while (token.type == TokenType::COMMA && (advance(), true));
+  }
+
+  consume(TokenType::RIGHT_PAREN);
+
+  // Prototype: ends with semicolon
+  if (token.type == TokenType::SEMICOLON) {
+    consume(TokenType::SEMICOLON);
+    return new FuncDecl(funcName, std::move(params), nullptr); // body = nullptr
+  }
+
+  // Otherwise it's a full function definition
+  consume(TokenType::LEFT_BRACE);
+
+  std::unique_ptr<Block> stmts = std::make_unique<Block>();
+  BlockItem *nextItem;
+  while (token.type != TokenType::RIGHT_BRACE) {
+    nextItem = parseBlockItem();
+    if (nextItem == nullptr)
+      break;
+    stmts->addItem(std::unique_ptr<BlockItem>(nextItem));
+  }
+  consume(TokenType::RIGHT_BRACE);
+
+  return new FuncDecl(funcName, std::move(params), std::move(stmts));
 }
 
 FuncDecl *Parser::parseFuncDecl(const std::string &funcName) {
