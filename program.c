@@ -1,26 +1,16 @@
-int test(int x, int y);
-
-int putchar(int c);
+int fib(int x);
 
 
 int main() {
-    int x = 20;
-    x = test(x, 0);
-
-    putchar(69);
-    putchar(68);
-    putchar(87);
-    putchar(49);
-    putchar(78);
-    putchar(3);
-    putchar(10);
-    
-    return x;
+    int x = 5;
+    int y = fib(x);
+    return y;
  }
  
-int test(int x, int y) {
-    for(int i=0; i<5;i++){
-        x++;
+int fib(int x){
+    if(x <= 1){
+        return x;
+    } else {
+        return fib(x - 1) + fib(x - 2);
     }
-    return x + y;
- }
+}

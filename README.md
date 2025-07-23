@@ -35,3 +35,4 @@ riscv64-unknown-linux-gnu-gcc -o aprog aprog.o -march=rv64imafd -mabi=lp64d -sta
 ### Bug fixes
 * Data Types
 * Data Structures
+* Register Allocation
