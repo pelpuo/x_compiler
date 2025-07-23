@@ -1266,36 +1266,6 @@ public:
 
 //////////////////////////////////////////////////////////////////////////
 
-// class Func : public AST {
-//   public:
-//     std::string name;
-//     std::unique_ptr<Block> body;
-  
-//     Func(std::string name, std::unique_ptr<Block> body)
-//         : name(std::move(name)), body(std::move(body)) {}
-  
-//     void print() {
-//       cout << "Function: " << name << endl;
-//       cout << "Body: " << endl;
-//       body->print();
-//     }
-  
-//     std::vector<TAC> generateTAC(std::string &tempVar) override {
-//       std::vector<TAC> code;
-//       auto bodyCode = body->generateTAC(tempVar);
-//       code.insert(code.end(), bodyCode.begin(), bodyCode.end());
-//       return code;
-//     }
-
-//     void resolveSymbol(SymbolTable &symTab) override {
-//       symTab.enterScope();
-//       body->resolveSymbol(symTab);
-//       symTab.exitScope();
-//     }
-
-//   };
-  
-
 class ASTProgram : public AST {
 public:
   std::vector<std::unique_ptr<FuncDecl>> functions;

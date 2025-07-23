@@ -33,7 +33,5 @@ riscv64-unknown-linux-gnu-gcc -o aprog aprog.o -march=rv64imafd -mabi=lp64d -sta
 
 
 ### Bug fixes
-* Function calls
-* Loops
-* Function prototypes
-* Library function calls
+* Data Types
+* Data Structures

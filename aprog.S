@@ -9,7 +9,7 @@ main:
     li t0, 20
     sd t0, -24(s0)
     ld t1, -24(s0)
-    li t2, 12
+    li t2, 0
     mv a0, t1
     mv a1, t2
     call test
@@ -56,12 +56,26 @@ test:
     addi s0, sp, 64
     sd a0, -24(s0)
     sd a1, -32(s0)
-    ld t0, -24(s0)
-    ld t1, -32(s0)
-    li t2, 2
-    mul t3, t1, t2
-    add t4, t0, t3
-    mv a0, t4
+    li t0, 0
+    sd t0, -40(s0)
+L19:
+    ld t1, -40(s0)
+    li t2, 5
+    slt t3, t1, t2
+    beqz t3, L21
+    ld t4, -24(s0)
+    addi t5, t4, 1
+    sd t5, -24(s0)
+L20:
+    ld t6, -40(s0)
+    addi t0, t6, 1
+    sd t0, -40(s0)
+    j L19
+L21:
+    ld t1, -24(s0)
+    ld t2, -32(s0)
+    add t3, t1, t2
+    mv a0, t3
     ld ra, 56(sp)
     ld s0, 48(sp)
     addi sp, sp, 64
