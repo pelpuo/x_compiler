@@ -154,20 +154,6 @@ ASTProgram *Parser::parseProgram() {
   ASTProgram *program = new ASTProgram();
   FuncDecl *func;
 
-  // Parse functions until we reach end-of-input (EOI)
-  // while ((func = parseFunction())) {
-  //   if (func->body)
-  //     program->addFunction(std::unique_ptr<FuncDecl>(func));
-  //   else
-  //     program->addPrototype(std::unique_ptr<FuncDecl>(func));
-
-
-  //   // If we encounter an EOI (End of Input), stop parsing
-  //   if (token.type == TokenType::EOI) {
-  //     return program;
-  //   }
-  // }
-
   while (token.type == TokenType::INT) {
     Declaration *decl = parseDeclaration();
     FuncDecl *func = dynamic_cast<FuncDecl *>(decl);
@@ -233,7 +219,7 @@ FuncDecl *Parser::parseFunction() {
 
 BlockItem *Parser::parseBlockItem() {
   // Check if the next token is a type specifier (indicating a declaration)
-  if (token.type == TokenType::INT) {
+  if (token.type == TokenType::INT || token.type == TokenType::STATIC || token.type == TokenType::EXTERN) {
     return parseDeclaration();
   } else {
     return parseStatement();
@@ -241,19 +227,23 @@ BlockItem *Parser::parseBlockItem() {
 }
 
 Declaration *Parser::parseDeclaration() {
-  consume(TokenType::INT); // Consume 'int' keyword
+  auto [type, storage] = parseTypeAndStorageClass();
+
+  // consume(TokenType::INT); // Consume 'int' keyword
   expect(TokenType::ID);
 
   std::string varName = token.value.value();
   consume(TokenType::ID);
 
-  // Check if it's a function declaration
   if (token.type == TokenType::LEFT_PAREN) {
-    return parseFuncDeclOrProto(varName);
+    FuncDecl *func = parseFuncDeclOrProto(varName);
+    func->setStorage(storage);  // Set storage on the function
+    return func;
   }
 
-  // Otherwise, it's a variable declaration
-  return parseVarDecl(varName);
+  VarDecl *var = parseVarDecl(varName);
+  var->setStorage(storage);     // Set storage on the variable
+  return var;
 }
 
 VarDecl *Parser::parseVarDecl(const std::string &varName) {
@@ -588,5 +578,55 @@ Expr *Parser::parseFactor() {
 
   return base; // [++ support]
 }
+
+
+std::pair<TypeSpecifier, StorageClass> Parser::parseTypeAndStorageClass() {
+  std::vector<TokenType> specifiers;
+
+  // Collect specifier tokens like: static, int, etc.
+  while (token.type == TokenType::STATIC ||
+         token.type == TokenType::EXTERN ||
+         token.type == TokenType::INT) { // Extend this for more types
+    specifiers.push_back(token.type);
+    advance();
+  }
+
+  // Separate into types and storage classes
+  std::vector<TypeSpecifier> types;
+  std::vector<StorageClass> storages;
+
+  for (TokenType spec : specifiers) {
+    switch (spec) {
+      case TokenType::INT:
+        types.push_back(TypeSpecifier::INT);
+        break;
+      case TokenType::STATIC:
+        storages.push_back(StorageClass::STATIC);
+        break;
+      case TokenType::EXTERN:
+        storages.push_back(StorageClass::EXTERN);
+        break;
+      default:
+        error(); // Unexpected specifier
+    }
+  }
+
+  if (types.size() != 1) {
+    std::cerr << "ERROR: Invalid or missing type specifier\n";
+    exit(1);
+  }
+
+  if (storages.size() > 1) {
+    std::cerr << "ERROR: Multiple storage class specifiers\n";
+    exit(1);
+  }
+
+  TypeSpecifier type = types[0];
+  StorageClass storage = storages.empty() ? StorageClass::NONE : storages[0];
+
+  return {type, storage};
+}
+
+
 
 Parser::Parser(Lexer &lex) : lexer(lex), HasError(false) { advance(); }

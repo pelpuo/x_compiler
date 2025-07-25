@@ -1,16 +1,6 @@
-int fib(int x);
-
-
 int main() {
     int x = 5;
-    int y = fib(x);
-    return y;
+    static int counter = 7;
+    return counter;
  }
- 
-int fib(int x){
-    if(x <= 1){
-        return x;
-    } else {
-        return fib(x - 1) + fib(x - 2);
-    }
-}
+

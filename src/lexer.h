@@ -7,6 +7,17 @@
 
 using namespace std;
 
+enum class StorageClass {
+  NONE,
+  STATIC,
+  EXTERN
+};
+
+enum class TypeSpecifier {
+  INT,
+  // Add these if needed later: UNSIGNED, LONG, etc.
+};
+
 typedef enum{
     EOI,
     SEMICOLON,
@@ -73,7 +84,10 @@ typedef enum{
 
     SWITCH,
     CASE,
-    DEFAULT
+    DEFAULT,
+
+    EXTERN,
+    STATIC
 }TokenType;
 
 static string TokenStr[] = {

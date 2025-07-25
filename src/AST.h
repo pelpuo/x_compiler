@@ -125,6 +125,25 @@ class ArgList {
   };
   
 //////////////////////////////////////////////////////////////////////////
+// Static variable declaration (e.g., `static int x = 10;`)
+class StaticVariable : public AST {
+public:
+  std::string name;
+  bool isGlobal;
+  int init;
+
+  StaticVariable(const std::string &n, bool global, int i)
+      : name(n), isGlobal(global), init(i) {}
+
+  std::vector<TAC> generateTAC(std::string &tempVar) override {
+    std::vector<TAC> code;
+    code.push_back(TAC("StaticVariable", name, isGlobal ? "1" : "0", std::to_string(init)));
+    return code;
+  }
+};
+
+
+//////////////////////////////////////////////////////////////////////////
 
 // Variable reference (e.g., `x`)
 class Variable : public Expr {
@@ -1159,6 +1178,8 @@ class VarDecl : public Declaration {
   public:
     std::string name;
     std::unique_ptr<Expr> initializer;  // Optional initializer
+    StorageClass storage = StorageClass::NONE; // Add this line
+    TypeSpecifier type = TypeSpecifier::INT;
   
     VarDecl(const std::string &name, std::unique_ptr<Expr> initializer = nullptr)
         : name(name), initializer(std::move(initializer)) {}
@@ -1172,16 +1193,55 @@ class VarDecl : public Declaration {
       cout << endl;
     }
   
+    // std::vector<TAC> generateTAC(std::string &tempVar) override {
+    //   std::vector<TAC> code;
+    //   tempVar = name;  // Variable name acts as the destination
+  
+    //   if (initializer) {
+    //     std::string initTemp;
+    //     auto initCode = initializer->generateTAC(initTemp);
+    //     code.insert(code.end(), initCode.begin(), initCode.end());
+    //     // code.push_back(TAC("store", initTemp, "", tempVar));
+    //   }
+    //   return code;
+    // }
+
     std::vector<TAC> generateTAC(std::string &tempVar) override {
       std::vector<TAC> code;
-      tempVar = name;  // Variable name acts as the destination
-  
+      tempVar = name;
+
+      // Handle static variables separately
+      if (storage == StorageClass::STATIC) {
+        std::string initVal = "0";
+
+        // If the initializer is a constant integer, use its value
+        if (initializer) {
+          IntLiteral *lit = dynamic_cast<IntLiteral *>(initializer.get());
+          if (lit) {
+            initVal = std::to_string(lit->value);
+          }
+        }
+
+        // Emit StaticVariable TAC: name, isGlobal (0 for block-scope), init value
+        code.push_back(TAC("StaticVariable", name, "0", initVal));
+        return code;
+      }
+
+      // Skip extern declarations (no definition emitted)
+      if (storage == StorageClass::EXTERN) {
+        return code;
+      }
+
+      // Handle normal local (automatic) variable with initializer
       if (initializer) {
         std::string initTemp;
         auto initCode = initializer->generateTAC(initTemp);
         code.insert(code.end(), initCode.begin(), initCode.end());
-        code.push_back(TAC("store", initTemp, "", tempVar));
+
+        // Emit store to local variable
+        code.push_back(TAC("store", initTemp, "", name));
       }
+
       return code;
     }
 
@@ -1194,6 +1254,11 @@ class VarDecl : public Declaration {
         initializer->resolveSymbol(symTab);
       }
     }
+
+  void setStorage(StorageClass s) { storage = s; }
+  StorageClass getStorage() const { return storage; }
+  void setType(TypeSpecifier t) { type = t; }
+  TypeSpecifier getType() const { return type; }
 };  
 
 //////////////////////////////////////////////////////////////////////////
@@ -1203,6 +1268,8 @@ public:
   std::string name;
   std::vector<std::string> params;
   std::unique_ptr<Block> body;
+  StorageClass storage = StorageClass::NONE; // Add this line
+  TypeSpecifier type = TypeSpecifier::INT;
 
   FuncDecl(const std::string &name, std::vector<std::string> params, std::unique_ptr<Block> body)
       : name(name), params(std::move(params)), body(std::move(body)) {}
@@ -1221,7 +1288,7 @@ public:
 
   std::vector<TAC> generateTAC(std::string &tempVar) override {
     std::vector<TAC> code;
-    code.push_back(TAC("function", name, "", ""));
+    code.push_back(TAC("function", name, storage == StorageClass::EXTERN ? "0" : "1", ""));
     
     // Emit TAC for function parameters
     for (const auto &param : params) {
@@ -1260,7 +1327,12 @@ public:
         body->resolveSymbol(symTab);
         symTab.exitScope();
     }
-}
+  }
+
+  void setStorage(StorageClass s) { storage = s; }
+  StorageClass getStorage() const { return storage; }
+  void setType(TypeSpecifier t) { type = t; } 
+  TypeSpecifier getType() const { return type; }
 
 };
 
@@ -1285,12 +1357,23 @@ public:
   }
 
   std::vector<TAC> generateTAC(std::string &tempVar) override {
+    // Do nothing or throw an error if this version should not be used
+    std::cerr << "ERROR: ASTProgram::generateTAC without symbol table is not supported.\n";
+    return {};
+  }
+
+  std::vector<TAC> generateTAC(std::string &tempVar, const SymbolTable &symTab) {
     std::vector<TAC> code;
     for (auto &func : functions) {
       std::string tempVar;
       auto funcCode = func->generateTAC(tempVar);
       code.insert(code.end(), funcCode.begin(), funcCode.end());
     }
+
+    // Emit static variables from symbol table
+    auto staticDefs = convertSymbolsToTAC(symTab);
+    code.insert(code.end(), staticDefs.begin(), staticDefs.end());
+
     return code;
   }
 
@@ -1302,4 +1385,27 @@ public:
       func->resolveSymbol(symTab);
     symTab.exitScope();
   }
+
+  std::vector<TAC> convertSymbolsToTAC(const SymbolTable &symTab) {
+    std::vector<TAC> TACdefs;
+
+    // Iterate over the global scope
+    for (const auto &[name, info] : symTab.globalScope) {
+        if (info.type != SymbolType::VARIABLE)
+            continue;
+
+        if (info.storageClass != StorageClass::STATIC && info.storageClass != StorageClass::EXTERN)
+            continue; // Only care about static or extern variables
+
+        const auto &init = info.initValue;
+        if (init.kind == InitKind::NoInitializer)
+            continue; // Not defined in this translation unit
+
+        int initVal = (init.kind == InitKind::Initial && init.value.has_value()) ? *init.value : 0;
+        TACdefs.emplace_back("StaticVariable", name, info.isGlobal ? "1" : "0", std::to_string(initVal));
+    }
+
+    return TACdefs;
+}
+  
 };

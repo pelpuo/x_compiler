@@ -50,7 +50,11 @@ void Lexer::next(Token &token) {
       token.type = TokenType::CASE;
     }else if(value == "default"){
       token.type = TokenType::DEFAULT;
-    }else {
+    }else if(value == "extern"){
+      token.type = TokenType::EXTERN;
+    }else if(value == "static"){
+      token.type = TokenType::STATIC;
+    } else {
       token.type = TokenType::ID;
       token.value = value;
     }

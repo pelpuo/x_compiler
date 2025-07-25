@@ -41,7 +41,7 @@ int main(int argc, char ** argv){
     SymbolTable symTab;
     prog->resolveSymbol(symTab);
     string tempVar;
-    std::vector<TAC> tacCode = prog->generateTAC(tempVar);
+    std::vector<TAC> tacCode = prog->generateTAC(tempVar, symTab);
     
     for (auto &tac : tacCode) {
         tac.print();

@@ -32,6 +32,7 @@ class Parser{
         FuncDecl *parseFuncDecl(const string &funcName);
         FuncDecl *parseFuncDeclOrProto(const string &funcName);
         ExprStmt *parseExprStmt();
+        std::pair<TypeSpecifier, StorageClass> parseTypeAndStorageClass();
         
     public:
         Parser(Lexer &lex);

@@ -33,7 +33,29 @@ class TACtoASM {
             return argReg;
         }
 
-    
+        void emitGlobalData(const std::vector<TAC>& dataTACs) {
+            if (dataTACs.empty()) return;
+
+            outfile << ".data\n";
+
+            for (const auto& tac : dataTACs) {
+                const std::string& name = tac.arg1;
+                bool isGlobal = tac.arg2 == "1";
+
+                if (tac.result == "-1") {
+                    // Marked as extern
+                    outfile << ".extern " << name << "\n";
+                } else {
+                    if (isGlobal) {
+                        outfile << ".globl " << name << "\n";
+                    }
+
+                    outfile << name << ":\n";
+                    outfile << "    .word " << tac.result << "\n";  // you can use .dword for 64-bit if needed
+                }
+            }
+        }
+
         void emitPrologue(int stackSize = 64) {
             outfile << "    addi sp, sp, -" << stackSize << "\n";
             outfile << "    sd ra, " << (stackSize - 8) << "(sp)\n";
@@ -72,6 +94,21 @@ class TACtoASM {
         TACtoASM(std::ofstream &file) : outfile(file) {}
     
         void generateAssembly(const std::vector<TAC>& tacCode) {
+            std::vector<TAC> dataTACs;
+            std::vector<TAC> codeTACs;
+
+            // Separate static variables from function code
+            for (const auto& tac : tacCode) {
+                if (tac.op == "StaticVariable") {
+                    dataTACs.push_back(tac);
+                } else {
+                    codeTACs.push_back(tac);
+                }
+            }
+
+            // Emit .data / .bss / .extern
+            emitGlobalData(dataTACs);
+
             outfile << ".text\n";
             outfile << ".globl main\n";
             outfile << ".type main, @function\n";
@@ -92,20 +129,39 @@ class TACtoASM {
                     outfile << "    mv a0, " << ensureLoaded(tac.arg1) << "\n";
                     emitEpilogue();
                 }
+                // else if (tac.op == "store") {
+                //     // Store value to local stack space
+                //     if (varMap.find(tac.result) == varMap.end()) {
+                //         stackOffset -= 8;  // Allocate if not already allocated
+                //         varMap[tac.result] = stackOffset;
+                //     }
+                //     outfile << "    sd " << mapToRegister(tac.arg1) << ", "
+                //             << varMap[tac.result] << "(s0)\n";
+                // }
+                // else if (tac.op == "load") {
+                //     // Load value from local stack space
+                //     if (varMap.find(tac.arg1) != varMap.end()) {
+                //         int offset = varMap[tac.arg1];
+                //         outfile << "    ld " << mapToRegister(tac.result) << ", " << offset << "(s0)\n";
+                //     }
+                // }
                 else if (tac.op == "store") {
-                    // Store value to local stack space
                     if (varMap.find(tac.result) == varMap.end()) {
-                        stackOffset -= 8;  // Allocate if not already allocated
+                        // It's a local variable but hasn't been allocated yet
+                        stackOffset -= 8;
                         varMap[tac.result] = stackOffset;
                     }
-                    outfile << "    sd " << mapToRegister(tac.arg1) << ", "
-                            << varMap[tac.result] << "(s0)\n";
+
+                    // Always store to local stack for auto variables
+                    outfile << "    sd " << mapToRegister(tac.arg1) << ", " << varMap[tac.result] << "(s0)\n";
                 }
                 else if (tac.op == "load") {
-                    // Load value from local stack space
                     if (varMap.find(tac.arg1) != varMap.end()) {
-                        int offset = varMap[tac.arg1];
-                        outfile << "    ld " << mapToRegister(tac.result) << ", " << offset << "(s0)\n";
+                        outfile << "    ld " << mapToRegister(tac.result) << ", " << varMap[tac.arg1] << "(s0)\n";
+                    } else {
+                        // Global/static
+                        outfile << "    la t6, " << tac.arg1 << "\n";
+                        outfile << "    ld " << mapToRegister(tac.result) << ", 0(t6)\n";
                     }
                 }
                 else if (tac.op == "li") {
