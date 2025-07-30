@@ -18,12 +18,12 @@ main:
     li t1, 12
     sd t1, -24(s0)
     la t6, counter
-    ld t2, 0(t6)
+    lw t2, 0(t6)
     la t6, counter2
     ld t3, 0(t6)
     add t4, t2, t3
     sw t4, -28(s0)
-    ld t5, -28(s0)
+    lw t5, -28(s0)
     mv a0, t5
     ld ra, 56(sp)
     ld s0, 48(sp)

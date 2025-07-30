@@ -247,21 +247,26 @@ public:
 class Variable : public Expr {
 public:
   std::string name;
+  std::unique_ptr<Type> exprType = nullptr;
+
   Variable(const std::string &name) : name(name) {}
   void print() { cout << "Variable: " << name << endl; }
 
   std::vector<TAC> generateTAC(std::string &tempVar) override {
     std::vector<TAC> code;
     tempVar = "t" + std::to_string(tempVarCounter++);
-    code.push_back(TAC("load", name, "", tempVar));
+    code.push_back(TAC("load", name, exprType->toString(), tempVar));
     return code;
   }
 
   void resolveSymbol(SymbolTable &symTab) override {
+    // SymbolInfo *sym = symTab.resolve(name);
     if (!symTab.resolve(name)) {
       std::cerr << "ERROR: Undeclared variable '" << name << "'" << std::endl;
       exit(1);
     }
+
+    exprType = symTab.resolve(name)->declaredType->clone();
   }
 };
 
@@ -431,7 +436,7 @@ public:
         std::cerr << "ERROR: ++/-- operand must be a variable" << std::endl;
         exit(1);
       }
-      code.emplace_back("store", newTemp, "", var->name);
+      code.emplace_back("store", newTemp, expType->toString(), var->name);
 
       // Result depends on whether it's prefix or postfix
       tempVar = isPostfix ? exprTemp : newTemp;
@@ -474,12 +479,11 @@ class Assignment : public Expr {
 public:
   std::unique_ptr<Expr> name;
   std::unique_ptr<Expr> value;
-  std::unique_ptr<Type> expType = nullptr; // <--- NEW
+  std::unique_ptr<Type> expType = nullptr;
 
   Assignment(std::unique_ptr<Expr> name, std::unique_ptr<Expr> value,
              std::unique_ptr<Type> expType = nullptr)
-      : name(std::move(name)), value(std::move(value)),
-        expType(std::move(expType)) {}
+      : name(std::move(name)), value(std::move(value)) {}
 
   void print() {
     cout << "AssignStmt: ";
@@ -509,7 +513,7 @@ public:
     if (expType && expType->getKind() == Type::Kind::INT)
       typeStr = "int";
 
-    code.push_back(TAC("store", valueTemp, typeStr, nameTemp));
+    code.push_back(TAC("store", valueTemp, "", nameTemp));
 
     tempVar = valueTemp;
 
@@ -598,7 +602,7 @@ public:
 
     // Emit TAC for compound assignment operation
     code.push_back(TAC(opStr, nameTemp, valueTemp, resultTemp));
-    code.push_back(TAC("store", resultTemp, "", nameTemp));
+    code.push_back(TAC("store", resultTemp, expType->toString(), nameTemp));
 
     return code;
   }
