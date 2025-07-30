@@ -201,30 +201,6 @@ src/TypeChecker.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/comp.dir/build.make CMakeFiles/comp.dir/src/TypeChecker.cpp.s
 .PHONY : src/TypeChecker.cpp.s
 
-src/codeGen.o: src/codeGen.cpp.o
-.PHONY : src/codeGen.o
-
-# target to build an object file
-src/codeGen.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/comp.dir/build.make CMakeFiles/comp.dir/src/codeGen.cpp.o
-.PHONY : src/codeGen.cpp.o
-
-src/codeGen.i: src/codeGen.cpp.i
-.PHONY : src/codeGen.i
-
-# target to preprocess a source file
-src/codeGen.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/comp.dir/build.make CMakeFiles/comp.dir/src/codeGen.cpp.i
-.PHONY : src/codeGen.cpp.i
-
-src/codeGen.s: src/codeGen.cpp.s
-.PHONY : src/codeGen.s
-
-# target to generate assembly for a file
-src/codeGen.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/comp.dir/build.make CMakeFiles/comp.dir/src/codeGen.cpp.s
-.PHONY : src/codeGen.cpp.s
-
 src/lexer.o: src/lexer.cpp.o
 .PHONY : src/lexer.o
 
@@ -315,9 +291,6 @@ help:
 	@echo "... src/TypeChecker.o"
 	@echo "... src/TypeChecker.i"
 	@echo "... src/TypeChecker.s"
-	@echo "... src/codeGen.o"
-	@echo "... src/codeGen.i"
-	@echo "... src/codeGen.s"
 	@echo "... src/lexer.o"
 	@echo "... src/lexer.i"
 	@echo "... src/lexer.s"

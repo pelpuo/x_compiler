@@ -2,6 +2,8 @@
 #include "TypeChecker.h"
 
 Expr *TypeChecker::typecheck(Expr *e, SymbolTable &symbols) {
+  // cout << "Typechecking expression: " << endl;
+
   if (auto *v = dynamic_cast<Variable *>(e)) {
     return typecheck_var(v, symbols);
   } else if (auto *c = dynamic_cast<ConstInt *>(e)) {
@@ -27,13 +29,13 @@ Expr *TypeChecker::typecheck(Expr *e, SymbolTable &symbols) {
 Expr *TypeChecker::typecheck_var(Variable *v, SymbolTable &symbols) {
   auto infoOpt = symbols.resolve(v->name);
   if (!infoOpt) {
-    std::cerr << "ERROR: Undeclared variable '" << v->name << "'\n";
+    std::cerr << "<TypeChecker> ERROR: Undeclared variable '" << v->name << "'\n";
     exit(1);
   }
 
   const SymbolInfo &info = *infoOpt;
   if (info.type == SymbolType::FUNCTION) {
-    std::cerr << "ERROR: Function name used as variable: " << v->name << "\n";
+    std::cerr << "<TypeChecker> ERROR: Function name used as variable: " << v->name << "\n";
     exit(1);
   }
 
@@ -78,7 +80,7 @@ Expr *TypeChecker::typecheck_binary(BinaryOp *b, SymbolTable &symbols) {
   const Type *lt = lhs->getExprType();
   const Type *rt = rhs->getExprType();
   if (!lt || !rt) {
-    std::cerr << "ERROR: Missing type info in binary operands\n";
+    std::cerr << "<TypeChecker> ERROR: Missing type info in binary operands\n";
     exit(1);
   }
 
@@ -120,7 +122,7 @@ Expr *TypeChecker::typecheck_assignment(Assignment *a, SymbolTable &symbols) {
   const Type *rt = rhs->getExprType();
 
   if (!lt || !rt) {
-    std::cerr << "ERROR: Assignment operands missing type info\n";
+    std::cerr << "<TypeChecker> ERROR: Assignment operands missing type info\n";
     exit(1);
   }
 
@@ -139,14 +141,14 @@ Expr *TypeChecker::typecheck_assignment(Assignment *a, SymbolTable &symbols) {
 Expr *TypeChecker::typecheck_funccall(FuncCall *call, SymbolTable &symbols) {
   auto infoOpt = symbols.resolve(call->name);
   if (!infoOpt.has_value()) {
-    std::cerr << "ERROR: Call to undeclared function " << call->name << "\n";
+    std::cerr << "<TypeChecker> ERROR: Call to undeclared function " << call->name << "\n";
     exit(1);
   }
 
   const SymbolInfo &info = *infoOpt;
   if (!info.declaredType ||
       info.declaredType->getKind() != Type::Kind::FUNCTION) {
-    std::cerr << "ERROR: Symbol is not a function: " << call->name << "\n";
+    std::cerr << "<TypeChecker> ERROR: Symbol is not a function: " << call->name << "\n";
     exit(1);
   }
 
@@ -155,7 +157,7 @@ Expr *TypeChecker::typecheck_funccall(FuncCall *call, SymbolTable &symbols) {
   const auto &paramTypes = fnType->getParamTypes();
 
   if (paramTypes.size() != call->args->size()) {
-    std::cerr << "ERROR: Function call argument count mismatch\n";
+    std::cerr << "<TypeChecker> ERROR: Function call argument count mismatch\n";
     exit(1);
   }
 
@@ -171,6 +173,9 @@ Expr *TypeChecker::typecheck_funccall(FuncCall *call, SymbolTable &symbols) {
 }
 
 Expr *TypeChecker::convert_to(Expr *e, const Type *target) {
+  cout << "Converting " << e->getExprType()->toString()
+       << " to " << target->toString() << std::endl;
+
   if (e->getExprType()->getKind() == target->getKind())
     return e;
   auto cast = std::make_unique<Cast>(std::unique_ptr<Expr>(e), target->clone());

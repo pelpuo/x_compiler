@@ -702,13 +702,11 @@ Parser::parseTypeAndStorageClass() {
   // Determine the base type
   std::unique_ptr<Type> baseType;
 
-  if (seenLong && !seenInt) {
+  if (seenLong) {
     baseType = std::make_unique<LongType>();
-  } else if (seenInt || (!seenLong && !seenInt)) {
+  } else if (seenInt && (!seenLong)) {
     // default type is int if nothing is specified
     baseType = std::make_unique<IntType>();
-  } else if (seenLong && seenInt) {
-    baseType = std::make_unique<LongType>();
   } else {
     std::cerr << "ERROR: Invalid or unsupported type combination\n";
     exit(1);

@@ -5,7 +5,6 @@
 
 #include "lexer.h"
 #include "parser.h"
-#include "codeGen.h"
 #include "TAC_to_ASM.h"
 
 using namespace std;
@@ -42,6 +41,9 @@ int main(int argc, char ** argv){
     // TypeChecker typeChecker;
     prog->resolveSymbol(symTab);
     prog->typeCheck(symTab);
+
+    prog->print();
+
     string tempVar;
     std::vector<TAC> tacCode = prog->generateTAC(tempVar, symTab);
     
@@ -50,8 +52,6 @@ int main(int argc, char ** argv){
     }
     ofstream outfile("aprog.S");
 
-    // CodeGenerator codeGen(outfile);
-    // codeGen.generate(prog);
 
     TACtoASM codeGen(outfile);
     codeGen.generateAssembly(tacCode);

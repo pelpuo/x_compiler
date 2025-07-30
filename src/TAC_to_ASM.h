@@ -144,7 +144,8 @@ public:
 
       else if (tac.op == "store") {
         std::string srcReg = ensureLoaded(tac.arg1);
-        std::string type = tac.arg2.empty() ? "long" : tac.arg2;
+        // std::string type = tac.arg2.empty() ? "long" : tac.arg2;
+        std::string type = tac.arg2;
         std::string op = (type == "int") ? "sw" : "sd";
 
         // Allocate stack slot for local variable if not already done

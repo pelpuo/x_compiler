@@ -187,7 +187,6 @@ CMakeFiles/comp.dir/src/main.cpp.o: \
  /usr/include/c++/11/pstl/execution_defs.h \
  /home/panda/Documents/Github/micomp/src/TAC.h \
  /home/panda/Documents/Github/micomp/src/TypeChecker.h \
- /home/panda/Documents/Github/micomp/src/codeGen.h \
  /home/panda/Documents/Github/micomp/src/TAC_to_ASM.h \
  /usr/include/c++/11/map /usr/include/c++/11/bits/stl_tree.h \
  /usr/include/c++/11/bits/stl_map.h \

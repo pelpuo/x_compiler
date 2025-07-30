@@ -7,3 +7,4 @@ comp
 aprog
 aprog.o
 aprog.S
+Makefile

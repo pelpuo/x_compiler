@@ -105,27 +105,27 @@ public:
 //////////////////////////////////////////////////////////////////////////
 
 // Integer literal
-class IntLiteral : public Expr {
-public:
-  int value;
-  IntLiteral(int val) : value(val) {}
-  void print() { cout << "IntLiteral: " << value << endl; }
+// class IntLiteral : public Expr {
+// public:
+//   int value;
+//   IntLiteral(int val) : value(val) {}
+//   void print() { cout << "IntLiteral: " << value << endl; }
 
-  std::vector<TAC> generateTAC(std::string &tempVar) override {
-    std::vector<TAC> code;
-    tempVar = "t" + std::to_string(tempVarCounter++);
-    code.push_back(TAC("li", std::to_string(value), "", tempVar));
-    return code;
-  }
+//   std::vector<TAC> generateTAC(std::string &tempVar) override {
+//     std::vector<TAC> code;
+//     tempVar = "t" + std::to_string(tempVarCounter++);
+//     code.push_back(TAC("li", std::to_string(value), "", tempVar));
+//     return code;
+//   }
 
-  void resolveSymbol(SymbolTable &symTab) override {}
+//   void resolveSymbol(SymbolTable &symTab) override {}
 
-  void typeCheck(SymbolTable &symTab) override {
-    TypeChecker checker;
-    Expr *res = checker.typecheck(this, symTab);
-    this->expType = res->getExprType()->clone(); // optional, for safety
-  }
-};
+//   void typeCheck(SymbolTable &symTab) override {
+//     TypeChecker checker;
+//     Expr *res = checker.typecheck(this, symTab);
+//     this->expType = res->getExprType()->clone(); // optional, for safety
+//   }
+// };
 
 //////////////////////////////////////////////////////////////////////////
 class Constant : public Expr {
@@ -145,7 +145,7 @@ public:
   std::vector<TAC> generateTAC(std::string &tempVar) override {
     std::vector<TAC> code;
     tempVar = "t" + std::to_string(tempVarCounter++);
-    code.push_back(TAC("li", std::to_string(value), "", tempVar));
+    code.push_back(TAC("li", std::to_string(value), "int", tempVar));
     return code;
   }
   void resolveSymbol(SymbolTable &symTab) override {}
@@ -168,7 +168,7 @@ public:
   std::vector<TAC> generateTAC(std::string &tempVar) override {
     std::vector<TAC> code;
     tempVar = "t" + std::to_string(tempVarCounter++);
-    code.push_back(TAC("li", std::to_string(value), "", tempVar));
+    code.push_back(TAC("li", std::to_string(value), "long", tempVar));
     return code;
   }
   void resolveSymbol(SymbolTable &symTab) override {}
@@ -436,6 +436,12 @@ public:
         std::cerr << "ERROR: ++/-- operand must be a variable" << std::endl;
         exit(1);
       }
+
+      if (!expType) {
+        std::cerr << "ERROR: UnaryOp used without typeCheck" << std::endl;
+        exit(1);
+      }
+
       code.emplace_back("store", newTemp, expType->toString(), var->name);
 
       // Result depends on whether it's prefix or postfix
@@ -508,12 +514,7 @@ public:
     auto valueCode = value->generateTAC(valueTemp);
     code.insert(code.end(), valueCode.begin(), valueCode.end());
 
-    // Emit TAC for assignment
-    std::string typeStr = "long";
-    if (expType && expType->getKind() == Type::Kind::INT)
-      typeStr = "int";
-
-    code.push_back(TAC("store", valueTemp, "", nameTemp));
+    code.push_back(TAC("store", valueTemp, expType->toString(), nameTemp));
 
     tempVar = valueTemp;
 
@@ -865,6 +866,14 @@ public:
     symTab.enterScope();
     for (auto &item : items) {
       item->resolveSymbol(symTab);
+    }
+    symTab.exitScope();
+  }
+
+  void typeCheck(SymbolTable &symTab) override {
+    symTab.enterScope();
+    for (auto &item : items) {
+      item->typeCheck(symTab);
     }
     symTab.exitScope();
   }
@@ -1424,7 +1433,6 @@ public:
 //////////////////////////////////////////////////////////////////////////
 
 // Variable declaration (e.g., `int x = 5;`)
-// Variable declaration (e.g., `int x = 5;`)
 class VarDecl : public Declaration {
 public:
   std::string name;
@@ -1475,16 +1483,14 @@ public:
     if (storage == StorageClass::STATIC) {
       std::string initVal = "0";
       if (initializer) {
-        if (auto lit = dynamic_cast<IntLiteral *>(initializer.get())) {
-          initVal = std::to_string(lit->value);
-        } else if (auto lit = dynamic_cast<ConstInt *>(initializer.get())) {
+        if (auto lit = dynamic_cast<ConstInt *>(initializer.get())) {
           initVal = std::to_string(lit->value);
         } else if (auto lit = dynamic_cast<ConstLong *>(initializer.get())) {
           initVal = std::to_string(lit->value);
         }
       }
 
-      code.push_back(TAC("StaticVariable", name, "0", initVal));
+      code.push_back(TAC("StaticVariable", name, type->toString(), initVal));
       return code;
     }
 
@@ -1500,6 +1506,7 @@ public:
       if (type && type->getKind() == Type::Kind::INT)
         typeStr = "int";
       code.push_back(TAC("store", initTemp, typeStr, name));
+      // code.push_back(TAC("HERE", "", "", ""));
     }
     if (!initializer) {
       std::string tempReg = "t0"; // Or use a real temp
@@ -1520,6 +1527,9 @@ public:
                 << std::endl;
       exit(1);
     }
+
+    std::cerr << "[DEBUG] Resolving symbol "<< name << "\n";
+
     if (initializer) {
       initializer->resolveSymbol(symTab);
     }
@@ -1533,6 +1543,27 @@ public:
 
   void setQualifier(TypeQualifier q) { typeQualifier = q; }
   TypeQualifier getQualifier() const { return typeQualifier; }
+
+  void typeCheck(SymbolTable &symTab) override {
+    TypeChecker checker;
+    if (initializer) {
+      initializer->typeCheck(symTab); // Typecheck the initializer expression
+
+      const Type *initType = initializer->getExprType();
+      const Type *declType = type.get();
+
+      if (!initType || !declType) {
+        std::cerr << "ERROR: Missing type in variable declaration '" << name
+                  << "'\n";
+        exit(1);
+      }
+
+      // If types don't match, insert implicit cast (e.g., int → long)
+      if (initType->getKind() != declType->getKind()) {
+        initializer.reset(checker.convert_to(initializer.release(), declType));
+      }
+    }
+  }
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -1620,9 +1651,27 @@ public:
   void typeCheck(SymbolTable &symTab) override {
     if (body) {
       symTab.enterScope();
-      for (const auto &param : params) {
-        symTab.declareVariable(param, std::make_unique<IntType>()); // TEMP
+
+      const auto *fnType = dynamic_cast<FunctionType *>(type.get());
+      if (!fnType) {
+        std::cerr << "ERROR: Function type is not FunctionType\n";
+        exit(1);
       }
+
+      const auto &paramTypes = fnType->getParamTypes();
+      if (paramTypes.size() != params.size()) {
+        std::cerr << "ERROR: Mismatch between parameter names and types\n";
+        exit(1);
+      }
+
+      for (size_t i = 0; i < params.size(); ++i) {
+        if (!symTab.declareVariable(params[i], paramTypes[i]->clone())) {
+          std::cerr << "ERROR: Redeclaration of parameter '" << params[i]
+                    << "'\n";
+          exit(1);
+        }
+      }
+
       body->typeCheck(symTab);
       symTab.exitScope();
     }

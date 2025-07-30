@@ -5,8 +5,6 @@ file(REMOVE_RECURSE
   "CMakeFiles/comp.dir/src/TAC_to_ASM.cpp.o.d"
   "CMakeFiles/comp.dir/src/TypeChecker.cpp.o"
   "CMakeFiles/comp.dir/src/TypeChecker.cpp.o.d"
-  "CMakeFiles/comp.dir/src/codeGen.cpp.o"
-  "CMakeFiles/comp.dir/src/codeGen.cpp.o.d"
   "CMakeFiles/comp.dir/src/lexer.cpp.o"
   "CMakeFiles/comp.dir/src/lexer.cpp.o.d"
   "CMakeFiles/comp.dir/src/main.cpp.o"

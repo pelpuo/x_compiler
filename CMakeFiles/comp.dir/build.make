@@ -111,24 +111,10 @@ CMakeFiles/comp.dir/src/TypeChecker.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/comp.dir/src/TypeChecker.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/panda/Documents/Github/micomp/src/TypeChecker.cpp -o CMakeFiles/comp.dir/src/TypeChecker.cpp.s
 
-CMakeFiles/comp.dir/src/codeGen.cpp.o: CMakeFiles/comp.dir/flags.make
-CMakeFiles/comp.dir/src/codeGen.cpp.o: src/codeGen.cpp
-CMakeFiles/comp.dir/src/codeGen.cpp.o: CMakeFiles/comp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/panda/Documents/Github/micomp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/comp.dir/src/codeGen.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/comp.dir/src/codeGen.cpp.o -MF CMakeFiles/comp.dir/src/codeGen.cpp.o.d -o CMakeFiles/comp.dir/src/codeGen.cpp.o -c /home/panda/Documents/Github/micomp/src/codeGen.cpp
-
-CMakeFiles/comp.dir/src/codeGen.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/comp.dir/src/codeGen.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/panda/Documents/Github/micomp/src/codeGen.cpp > CMakeFiles/comp.dir/src/codeGen.cpp.i
-
-CMakeFiles/comp.dir/src/codeGen.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/comp.dir/src/codeGen.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/panda/Documents/Github/micomp/src/codeGen.cpp -o CMakeFiles/comp.dir/src/codeGen.cpp.s
-
 CMakeFiles/comp.dir/src/lexer.cpp.o: CMakeFiles/comp.dir/flags.make
 CMakeFiles/comp.dir/src/lexer.cpp.o: src/lexer.cpp
 CMakeFiles/comp.dir/src/lexer.cpp.o: CMakeFiles/comp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/panda/Documents/Github/micomp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/comp.dir/src/lexer.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/panda/Documents/Github/micomp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/comp.dir/src/lexer.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/comp.dir/src/lexer.cpp.o -MF CMakeFiles/comp.dir/src/lexer.cpp.o.d -o CMakeFiles/comp.dir/src/lexer.cpp.o -c /home/panda/Documents/Github/micomp/src/lexer.cpp
 
 CMakeFiles/comp.dir/src/lexer.cpp.i: cmake_force
@@ -142,7 +128,7 @@ CMakeFiles/comp.dir/src/lexer.cpp.s: cmake_force
 CMakeFiles/comp.dir/src/main.cpp.o: CMakeFiles/comp.dir/flags.make
 CMakeFiles/comp.dir/src/main.cpp.o: src/main.cpp
 CMakeFiles/comp.dir/src/main.cpp.o: CMakeFiles/comp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/panda/Documents/Github/micomp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/comp.dir/src/main.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/panda/Documents/Github/micomp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/comp.dir/src/main.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/comp.dir/src/main.cpp.o -MF CMakeFiles/comp.dir/src/main.cpp.o.d -o CMakeFiles/comp.dir/src/main.cpp.o -c /home/panda/Documents/Github/micomp/src/main.cpp
 
 CMakeFiles/comp.dir/src/main.cpp.i: cmake_force
@@ -156,7 +142,7 @@ CMakeFiles/comp.dir/src/main.cpp.s: cmake_force
 CMakeFiles/comp.dir/src/parser.cpp.o: CMakeFiles/comp.dir/flags.make
 CMakeFiles/comp.dir/src/parser.cpp.o: src/parser.cpp
 CMakeFiles/comp.dir/src/parser.cpp.o: CMakeFiles/comp.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/panda/Documents/Github/micomp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/comp.dir/src/parser.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/panda/Documents/Github/micomp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/comp.dir/src/parser.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/comp.dir/src/parser.cpp.o -MF CMakeFiles/comp.dir/src/parser.cpp.o.d -o CMakeFiles/comp.dir/src/parser.cpp.o -c /home/panda/Documents/Github/micomp/src/parser.cpp
 
 CMakeFiles/comp.dir/src/parser.cpp.i: cmake_force
@@ -172,7 +158,6 @@ comp_OBJECTS = \
 "CMakeFiles/comp.dir/src/AST.cpp.o" \
 "CMakeFiles/comp.dir/src/TAC_to_ASM.cpp.o" \
 "CMakeFiles/comp.dir/src/TypeChecker.cpp.o" \
-"CMakeFiles/comp.dir/src/codeGen.cpp.o" \
 "CMakeFiles/comp.dir/src/lexer.cpp.o" \
 "CMakeFiles/comp.dir/src/main.cpp.o" \
 "CMakeFiles/comp.dir/src/parser.cpp.o"
@@ -183,13 +168,12 @@ comp_EXTERNAL_OBJECTS =
 comp: CMakeFiles/comp.dir/src/AST.cpp.o
 comp: CMakeFiles/comp.dir/src/TAC_to_ASM.cpp.o
 comp: CMakeFiles/comp.dir/src/TypeChecker.cpp.o
-comp: CMakeFiles/comp.dir/src/codeGen.cpp.o
 comp: CMakeFiles/comp.dir/src/lexer.cpp.o
 comp: CMakeFiles/comp.dir/src/main.cpp.o
 comp: CMakeFiles/comp.dir/src/parser.cpp.o
 comp: CMakeFiles/comp.dir/build.make
 comp: CMakeFiles/comp.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/panda/Documents/Github/micomp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Linking CXX executable comp"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/panda/Documents/Github/micomp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Linking CXX executable comp"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/comp.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
