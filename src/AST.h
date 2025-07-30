@@ -3,8 +3,8 @@
 #include "SymbolTable.h"
 #include "TAC.h"
 #include "Type.h"
-#include "lexer.h"
 #include "TypeChecker.h"
+#include "lexer.h"
 #include <iostream>
 #include <memory>
 #include <string>
@@ -66,7 +66,7 @@ public:
   virtual ~AST() = default;
   virtual std::vector<TAC> generateTAC(std::string &tempVar) = 0;
   virtual void resolveSymbol(SymbolTable &symTab) {}
-  virtual void typeCheck(SymbolTable &symTab){}
+  virtual void typeCheck(SymbolTable &symTab) {}
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -224,15 +224,19 @@ class StaticVariable : public AST {
 public:
   std::string name;
   bool isGlobal;
-  int init;
+  std::unique_ptr<Type> type;
+  StaticInit init; // your StaticInit variant: IntInit / LongInit
 
-  StaticVariable(const std::string &n, bool global, int i)
-      : name(n), isGlobal(global), init(i) {}
+  StaticVariable(std::string n, bool g, std::unique_ptr<Type> t, StaticInit i)
+      : name(std::move(n)), isGlobal(g), type(std::move(t)),
+        init(std::move(i)) {}
 
   std::vector<TAC> generateTAC(std::string &tempVar) override {
     std::vector<TAC> code;
-    code.push_back(TAC("StaticVariable", name, isGlobal ? "1" : "0",
-                       std::to_string(init)));
+    std::string initStr = (init.kind == StaticInit::Kind::IntInit)
+                              ? std::to_string(init.intVal)
+                              : std::to_string(init.longVal);
+    code.push_back(TAC("StaticVariable", name, isGlobal ? "1" : "0", initStr));
     return code;
   }
 };
@@ -501,7 +505,11 @@ public:
     code.insert(code.end(), valueCode.begin(), valueCode.end());
 
     // Emit TAC for assignment
-    code.push_back(TAC("store", valueTemp, "", nameTemp));
+    std::string typeStr = "long";
+    if (expType && expType->getKind() == Type::Kind::INT)
+      typeStr = "int";
+
+    code.push_back(TAC("store", valueTemp, typeStr, nameTemp));
 
     tempVar = valueTemp;
 
@@ -625,15 +633,39 @@ public:
     std::vector<TAC> code;
     std::string exprTemp;
 
-    // Generate TAC for the expression
+    // Generate TAC for the inner expression
     auto exprCode = expr->generateTAC(exprTemp);
     code.insert(code.end(), exprCode.begin(), exprCode.end());
 
-    // Create a new temporary variable for the result
-    tempVar = "t" + std::to_string(tempVarCounter++);
+    // Get source and destination types
+    Type *fromType = expr->getExprType();
+    Type *toType = this->type.get();
 
-    // Emit TAC for cast operation
-    code.push_back(TAC("cast", exprTemp, type->toString(), tempVar));
+    // If type is unchanged, no cast needed
+    if (fromType->getKind() == toType->getKind()) {
+      tempVar = exprTemp;
+      return code;
+    }
+
+    // Create a new temporary variable for the result
+    tempVar = "t" + std::to_string(AST::tempVarCounter++);
+
+    // Determine the cast instruction
+    std::string inst;
+    if (toType->getKind() == Type::Kind::LONG &&
+        fromType->getKind() == Type::Kind::INT) {
+      inst = "SignExtend";
+    } else if (toType->getKind() == Type::Kind::INT &&
+               fromType->getKind() == Type::Kind::LONG) {
+      inst = "Truncate";
+    } else {
+      std::cerr << "ERROR: Unsupported cast from " << fromType->toString()
+                << " to " << toType->toString() << std::endl;
+      exit(1);
+    }
+
+    // Emit cast instruction
+    code.emplace_back(inst, exprTemp, "", tempVar);
 
     return code;
   }
@@ -1460,7 +1492,19 @@ public:
       std::string initTemp;
       auto initCode = initializer->generateTAC(initTemp);
       code.insert(code.end(), initCode.begin(), initCode.end());
-      code.push_back(TAC("store", initTemp, "", name));
+      std::string typeStr = "long";
+      if (type && type->getKind() == Type::Kind::INT)
+        typeStr = "int";
+      code.push_back(TAC("store", initTemp, typeStr, name));
+    }
+    if (!initializer) {
+      std::string tempReg = "t0"; // Or use a real temp
+      std::string typeStr = "long";
+      if (type && type->getKind() == Type::Kind::INT)
+        typeStr = "int";
+
+      code.push_back(TAC("li", "0", "", tempVar));
+      code.push_back(TAC("store", tempVar, typeStr, name));
     }
 
     return code;
@@ -1528,6 +1572,8 @@ public:
       auto bodyCode = body->generateTAC(tempVar);
       code.insert(code.end(), bodyCode.begin(), bodyCode.end());
     }
+
+    // code.push_back(TAC("RETURN", "0", "", ""));
     return code;
   }
 
