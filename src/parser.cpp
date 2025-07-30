@@ -144,6 +144,18 @@ bool Parser::isCompoundAssignOp(TokenType type) {
   }
 }
 
+bool Parser::isTypeSpecifier(TokenType type) {
+  switch (type) {
+  case TokenType::INT:
+  case TokenType::LONG:
+  case TokenType::UNSIGNED:
+  case TokenType::VOID:
+    return true;
+  default:
+    return false;
+  }
+}
+
 ASTProgram *Parser::parse() {
   ASTProgram *Res = parseProgram();
   expect(TokenType::EOI);
@@ -165,8 +177,7 @@ ASTProgram *Parser::parseProgram() {
       program->addFunction(std::unique_ptr<FuncDecl>(func));
     else
       program->addPrototype(std::unique_ptr<FuncDecl>(func));
-}
-
+  }
 
   // Optionally, you can handle cases where there are no functions here.
   // E.g., if we reach this point without parsing any functions, we could throw
@@ -174,52 +185,54 @@ ASTProgram *Parser::parseProgram() {
   return program;
 }
 
-FuncDecl *Parser::parseFunction() {
-  std::unique_ptr<Block> stmts = std::make_unique<Block>();
+// FuncDecl *Parser::parseFunction() {
+//   std::unique_ptr<Block> stmts = std::make_unique<Block>();
 
-  // Parse the return type of the function (assumed 'int')
-  consume(TokenType::INT);
+//   // Parse the return type of the function (assumed 'int')
+//   consume(TokenType::INT);
 
-  // Parse the function name
-  expect(TokenType::ID);
-  std::string name = token.value.value();
-  consume(TokenType::ID);
+//   // Parse the function name
+//   expect(TokenType::ID);
+//   std::string name = token.value.value();
+//   consume(TokenType::ID);
 
-  // Parse the parameters inside parentheses
-  consume(TokenType::LEFT_PAREN);
-  std::vector<std::string> params;
+//   // Parse the parameters inside parentheses
+//   consume(TokenType::LEFT_PAREN);
+//   std::vector<std::string> params;
 
-  // Parse each parameter if available
-  if (token.type != TokenType::RIGHT_PAREN) {
-    do {
-      consume(TokenType::INT); // Assume each param is of type 'int'
-      expect(TokenType::ID);
-      std::string paramName = token.value.value();
-      consume(TokenType::ID);
-      params.push_back(paramName);
-    } while (token.type == TokenType::COMMA && (advance(), true));
-  }
+//   // Parse each parameter if available
+//   if (token.type != TokenType::RIGHT_PAREN) {
+//     do {
+//       consume(TokenType::INT); // Assume each param is of type 'int'
+//       expect(TokenType::ID);
+//       std::string paramName = token.value.value();
+//       consume(TokenType::ID);
+//       params.push_back(paramName);
+//     } while (token.type == TokenType::COMMA && (advance(), true));
+//   }
 
-  consume(TokenType::RIGHT_PAREN);
+//   consume(TokenType::RIGHT_PAREN);
 
-  // Parse the function body enclosed in braces
-  consume(TokenType::LEFT_BRACE);
-  BlockItem *nextItem;
-  while (token.type != TokenType::RIGHT_BRACE) {
-    nextItem = parseBlockItem(); // Parse block items (statements, expressions)
-    if (nextItem == nullptr)
-      break; // If no more block items are found, break
-    stmts->addItem(std::unique_ptr<BlockItem>(nextItem));
-  }
-  consume(TokenType::RIGHT_BRACE); // Consume the closing brace
+//   // Parse the function body enclosed in braces
+//   consume(TokenType::LEFT_BRACE);
+//   BlockItem *nextItem;
+//   while (token.type != TokenType::RIGHT_BRACE) {
+//     nextItem = parseBlockItem(); // Parse block items (statements, expressions)
+//     if (nextItem == nullptr)
+//       break; // If no more block items are found, break
+//     stmts->addItem(std::unique_ptr<BlockItem>(nextItem));
+//   }
+//   consume(TokenType::RIGHT_BRACE); // Consume the closing brace
 
-  // Return a new function declaration object
-  return new FuncDecl(name, std::move(params), std::move(stmts));
-}
+//   // Return a new function declaration object
+//   return new FuncDecl(name, std::move(params), std::move(stmts));
+// }
 
 BlockItem *Parser::parseBlockItem() {
   // Check if the next token is a type specifier (indicating a declaration)
-  if (token.type == TokenType::INT || token.type == TokenType::STATIC || token.type == TokenType::EXTERN) {
+  if (token.type == TokenType::INT || token.type == TokenType::STATIC ||
+      token.type == TokenType::EXTERN || token.type == TokenType::CONST ||
+      token.type == TokenType::LONG) {
     return parseDeclaration();
   } else {
     return parseStatement();
@@ -227,26 +240,31 @@ BlockItem *Parser::parseBlockItem() {
 }
 
 Declaration *Parser::parseDeclaration() {
-  auto [type, storage] = parseTypeAndStorageClass();
+  std::unique_ptr<Type> type;
+  StorageClass storage;
+  TypeQualifier qualifier;
+  std::tie(type, storage, qualifier) = parseTypeAndStorageClass();
 
-  // consume(TokenType::INT); // Consume 'int' keyword
   expect(TokenType::ID);
-
-  std::string varName = token.value.value();
+  std::string name = token.value.value();
   consume(TokenType::ID);
 
   if (token.type == TokenType::LEFT_PAREN) {
-    FuncDecl *func = parseFuncDeclOrProto(varName);
-    func->setStorage(storage);  // Set storage on the function
+    // It's a function declaration or definition
+    FuncDecl *func = parseFuncDeclOrProto(name, std::move(type));
+    func->setStorage(storage);
     return func;
   }
 
-  VarDecl *var = parseVarDecl(varName);
-  var->setStorage(storage);     // Set storage on the variable
+  // Otherwise it's a variable declaration
+  VarDecl *var = parseVarDecl(name, std::move(type));
+  var->setStorage(storage);
+  var->setQualifier(qualifier);
   return var;
 }
 
-VarDecl *Parser::parseVarDecl(const std::string &varName) {
+
+VarDecl *Parser::parseVarDecl(const std::string &varName, std::unique_ptr<Type> type) {
   std::unique_ptr<Expr> initializer = nullptr;
 
   // Check for optional initialization (e.g., int x = 10;)
@@ -256,78 +274,83 @@ VarDecl *Parser::parseVarDecl(const std::string &varName) {
   }
 
   consume(TokenType::SEMICOLON); // Expect a semicolon at the end
-  return new VarDecl(varName, std::move(initializer));
+  return new VarDecl(varName, std::move(initializer), std::move(type));
 }
 
-
-FuncDecl *Parser::parseFuncDeclOrProto(const std::string &funcName) {
+FuncDecl *Parser::parseFuncDeclOrProto(const std::string &funcName, std::unique_ptr<Type> returnType) {
   consume(TokenType::LEFT_PAREN);
 
-  std::vector<std::string> params;
+  std::vector<std::string> paramNames;
+  std::vector<std::unique_ptr<Type>> paramTypes;
+
   if (token.type != TokenType::RIGHT_PAREN) {
     do {
-      consume(TokenType::INT);
+      auto [paramType, _, __] = parseTypeAndStorageClass();
       expect(TokenType::ID);
       std::string paramName = token.value.value();
-      // consume(TokenType::ID);
-      advance(); // Consume the ID token
-      params.push_back(paramName);
+      advance();  // consume the ID
+      paramNames.push_back(paramName);
+      paramTypes.push_back(std::move(paramType));
     } while (token.type == TokenType::COMMA && (advance(), true));
   }
 
   consume(TokenType::RIGHT_PAREN);
 
-  // Prototype: ends with semicolon
+  std::unique_ptr<Type> funcType = std::make_unique<FunctionType>(std::move(paramTypes), std::move(returnType));
+
+  // Prototype
   if (token.type == TokenType::SEMICOLON) {
     consume(TokenType::SEMICOLON);
-    return new FuncDecl(funcName, std::move(params), nullptr); // body = nullptr
+    return new FuncDecl(funcName, std::move(paramNames), nullptr, std::move(funcType));
   }
 
-  // Otherwise it's a full function definition
+  // Function definition
   consume(TokenType::LEFT_BRACE);
-
-  std::unique_ptr<Block> stmts = std::make_unique<Block>();
+  std::unique_ptr<Block> body = std::make_unique<Block>();
   BlockItem *nextItem;
+
   while (token.type != TokenType::RIGHT_BRACE) {
     nextItem = parseBlockItem();
-    if (nextItem == nullptr)
-      break;
-    stmts->addItem(std::unique_ptr<BlockItem>(nextItem));
+    if (!nextItem) break;
+    body->addItem(std::unique_ptr<BlockItem>(nextItem));
   }
+
   consume(TokenType::RIGHT_BRACE);
 
-  return new FuncDecl(funcName, std::move(params), std::move(stmts));
+  return new FuncDecl(funcName, std::move(paramNames), std::move(body), std::move(funcType));
 }
 
-FuncDecl *Parser::parseFuncDecl(const std::string &funcName) {
-  consume(TokenType::LEFT_PAREN);
 
-  std::vector<std::string> params;
-  if (token.type != TokenType::RIGHT_PAREN) {
-    do {
-      consume(TokenType::INT);
-      expect(TokenType::ID);
-      std::string paramName = token.value.value();
-      consume(TokenType::ID);
-      params.push_back(paramName);
-    } while (token.type == TokenType::COMMA && (advance(), true));
-  }
+// FuncDecl *Parser::parseFuncDecl(const std::string &funcName,
+//                                 TypeSpecifier type) {
+//   consume(TokenType::LEFT_PAREN);
 
-  consume(TokenType::RIGHT_PAREN);
-  consume(TokenType::LEFT_BRACE);
+//   std::vector<std::string> params;
+//   if (token.type != TokenType::RIGHT_PAREN) {
+//     do {
+//       consume(TokenType::INT);
+//       expect(TokenType::ID);
+//       std::string paramName = token.value.value();
+//       consume(TokenType::ID);
+//       params.push_back(paramName);
+//     } while (token.type == TokenType::COMMA && (advance(), true));
+//   }
 
-  std::unique_ptr<Block> stmts = std::make_unique<Block>();
-  BlockItem *nextItem;
-  while (token.type != TokenType::RIGHT_BRACE) {
-    nextItem = parseBlockItem();
-    if (nextItem == nullptr)
-      break;
-    stmts->addItem(std::unique_ptr<BlockItem>(nextItem));
-  }
-  consume(TokenType::RIGHT_BRACE);
+//   consume(TokenType::RIGHT_PAREN);
+//   consume(TokenType::LEFT_BRACE);
 
-  return new FuncDecl(funcName, std::move(params), std::move(stmts));
-}
+//   std::unique_ptr<Block> stmts = std::make_unique<Block>();
+//   BlockItem *nextItem;
+//   while (token.type != TokenType::RIGHT_BRACE) {
+//     nextItem = parseBlockItem();
+//     if (nextItem == nullptr)
+//       break;
+//     stmts->addItem(std::unique_ptr<BlockItem>(nextItem));
+//   }
+//   consume(TokenType::RIGHT_BRACE);
+
+//   return new FuncDecl(funcName, std::move(params), std::move(stmts));
+// }
 
 Stmt *Parser::parseStatement() {
   if (token.type == TokenType::RETURN) {
@@ -380,13 +403,17 @@ Stmt *Parser::parseStatement() {
     // Parse init part which can be either a declaration or an expression
     // statement
     std::unique_ptr<BlockItem> init;
-    if (token.type == TokenType::INT) {
-      consume(TokenType::INT); // Consume 'int' keyword
+    if (token.type == TokenType::INT || token.type == TokenType::STATIC ||
+        token.type == TokenType::EXTERN || token.type == TokenType::CONST ||
+        token.type == TokenType::LONG) {
+      // consume(TokenType::INT); // Consume 'int' keyword
+      auto [type, storage, TypeQualifier] = parseTypeAndStorageClass();
+
       expect(TokenType::ID);
 
       std::string varName = token.value.value();
       consume(TokenType::ID);
-      init.reset(parseVarDecl(varName));
+      init.reset(parseVarDecl(varName, std::move(type)));
     } else {
       init.reset(parseExprStmt());
     }
@@ -536,10 +563,23 @@ Expr *Parser::parseTerm() { return nullptr; }
 Expr *Parser::parseFactor() {
   Expr *base;
 
-  if (token.type == TokenType::NUM) {
-    string tokentext = token.value.value();
-    consume(TokenType::NUM);
-    base = new IntLiteral(stoi(tokentext));
+  // if (token.type == TokenType::NUM) {
+  //   string tokentext = token.value.value();
+  //   consume(TokenType::NUM);
+  //   base = new IntLiteral(stoi(tokentext));
+  // } else if (token.type == TokenType::LONG_CONST) {
+  //   string tokentext = token.value.value();
+  //   consume(TokenType::LONG_CONST);
+  //   try {
+  //     long longValue = std::stoll(tokentext);
+  //     base = new ConstLong(longValue);
+  //   } catch (const std::exception &) {
+  //     std::cerr << "ERROR: Invalid long constant value\n";
+  //     exit(1);
+  //   }
+  // }
+  if(token.type == TokenType::NUM || token.type == TokenType::LONG_CONST) {
+    base = parseConstant(); 
   } else if (token.type == TokenType::LEFT_PAREN) {
     consume(TokenType::LEFT_PAREN);
     base = parseExpr();
@@ -579,54 +619,169 @@ Expr *Parser::parseFactor() {
   return base; // [++ support]
 }
 
+// TypeSpecifier Parser::parseType(std::vector<TypeSpecifier> &types) {
+//   if (types.empty()) {
+//     std::cerr << "ERROR: Missing type specifier\n";
+//     exit(1);
+//   }
 
-std::pair<TypeSpecifier, StorageClass> Parser::parseTypeAndStorageClass() {
+//   if (types.size() == 1 && types[0] == TypeSpecifier::INT) {
+//     return TypeSpecifier::INT;
+//   }
+
+//   if ((types.size() == 1 && types[0] == TypeSpecifier::LONG) ||
+//       (types.size() == 2 &&
+//        ((types[0] == TypeSpecifier::INT && types[1] == TypeSpecifier::LONG) ||
+//         (types[0] == TypeSpecifier::LONG && types[1] == TypeSpecifier::INT)))) {
+//     return TypeSpecifier::LONG;
+//   }
+
+//   std::cerr << "ERROR: Invalid type specifier combination\n";
+//   exit(1);
+// }
+
+std::tuple<std::unique_ptr<Type>, StorageClass, TypeQualifier>
+Parser::parseTypeAndStorageClass() {
   std::vector<TokenType> specifiers;
 
-  // Collect specifier tokens like: static, int, etc.
-  while (token.type == TokenType::STATIC ||
-         token.type == TokenType::EXTERN ||
-         token.type == TokenType::INT) { // Extend this for more types
+  // Collect all valid type/storage/qualifier specifiers
+  while (token.type == TokenType::STATIC || token.type == TokenType::EXTERN ||
+         token.type == TokenType::CONST || token.type == TokenType::INT ||
+         token.type == TokenType::LONG) {
     specifiers.push_back(token.type);
     advance();
   }
 
-  // Separate into types and storage classes
-  std::vector<TypeSpecifier> types;
-  std::vector<StorageClass> storages;
+  bool seenConst = false;
+  bool seenInt = false;
+  bool seenLong = false;
+  StorageClass storage = StorageClass::NONE;
 
   for (TokenType spec : specifiers) {
     switch (spec) {
-      case TokenType::INT:
-        types.push_back(TypeSpecifier::INT);
-        break;
-      case TokenType::STATIC:
-        storages.push_back(StorageClass::STATIC);
-        break;
-      case TokenType::EXTERN:
-        storages.push_back(StorageClass::EXTERN);
-        break;
-      default:
-        error(); // Unexpected specifier
+    case TokenType::INT:
+      if (seenInt) {
+        std::cerr << "ERROR: Duplicate 'int' specifier\n";
+        exit(1);
+      }
+      seenInt = true;
+      break;
+    case TokenType::LONG:
+      if (seenLong) {
+        std::cerr << "ERROR: Duplicate 'long' specifier\n";
+        exit(1);
+      }
+      seenLong = true;
+      break;
+    case TokenType::CONST:
+      if (seenConst) {
+        std::cerr << "ERROR: Duplicate 'const' qualifier\n";
+        exit(1);
+      }
+      seenConst = true;
+      break;
+    case TokenType::STATIC:
+      if (storage != StorageClass::NONE) {
+        std::cerr << "ERROR: Multiple storage classes\n";
+        exit(1);
+      }
+      storage = StorageClass::STATIC;
+      break;
+    case TokenType::EXTERN:
+      if (storage != StorageClass::NONE) {
+        std::cerr << "ERROR: Multiple storage classes\n";
+        exit(1);
+      }
+      storage = StorageClass::EXTERN;
+      break;
+    default:
+      error();
     }
   }
 
-  if (types.size() != 1) {
-    std::cerr << "ERROR: Invalid or missing type specifier\n";
+  // Determine the base type
+  std::unique_ptr<Type> baseType;
+
+  if (seenLong && !seenInt) {
+    baseType = std::make_unique<LongType>();
+  } else if (seenInt || (!seenLong && !seenInt)) {
+    // default type is int if nothing is specified
+    baseType = std::make_unique<IntType>();
+  } else if (seenLong && seenInt) {
+    baseType = std::make_unique<LongType>();
+  } else {
+    std::cerr << "ERROR: Invalid or unsupported type combination\n";
     exit(1);
   }
 
-  if (storages.size() > 1) {
-    std::cerr << "ERROR: Multiple storage class specifiers\n";
-    exit(1);
-  }
+  TypeQualifier qualifier = seenConst ? TypeQualifier::CONST : TypeQualifier::NONE;
 
-  TypeSpecifier type = types[0];
-  StorageClass storage = storages.empty() ? StorageClass::NONE : storages[0];
-
-  return {type, storage};
+  return {std::move(baseType), storage, qualifier};
 }
 
 
+Expr *Parser::parseConstant() {
+  if (token.type == TokenType::NUM) {
+    std::string tokentext = token.value.value();
+
+    uint64_t v;
+    try {
+      v = std::stoull(tokentext);
+    } catch (const std::exception &) {
+      std::cerr << "ERROR: Invalid constant value\n";
+      exit(1);
+    }
+
+    if (v > INT64_MAX) {
+      std::cerr
+          << "ERROR: Constant is too large to represent as an int or long\n";
+      exit(1);
+    }
+
+    // consume(TokenType::NUM);
+    consume(token.type); // Consume either NUM or LONG_CONST
+
+    if (v <= INT32_MAX) {
+      return new ConstInt(static_cast<int>(v));
+    } else {
+      return new ConstLong(static_cast<long long>(v));
+    }
+
+  } else if (token.type == TokenType::LONG_CONST) {
+    std::string tokentext = token.value.value();
+    long long v;
+    try {
+      v = std::stoll(tokentext);
+    } catch (const std::exception &) {
+      std::cerr << "ERROR: Invalid long constant value\n";
+      exit(1);
+    }
+    consume(TokenType::LONG_CONST); // Consume LONG_CONST
+    return new ConstLong(v);
+  } else {
+    error();
+    return nullptr; // Prevent control reaching end of non-void
+  }
+}
+
+Expr *Parser::parseCast() {
+  if (token.type == TokenType::LEFT_PAREN) {
+    consume(TokenType::LEFT_PAREN);
+
+    if (isTypeSpecifier(token.type)) {
+      auto [type, storage, qual] = parseTypeAndStorageClass();
+      consume(TokenType::RIGHT_PAREN);
+      Expr *expr = parseExpr(getPrecedence(TokenType::LOGICAL_NOT));
+      return new Cast(std::unique_ptr<Expr>(expr), std::move(type));
+    }
+
+    // If not a type, it's a parenthesized expression
+    Expr *inner = parseExpr();
+    consume(TokenType::RIGHT_PAREN);
+    return inner;
+  }
+
+  return parseFactor();
+}
 
 Parser::Parser(Lexer &lex) : lexer(lex), HasError(false) { advance(); }

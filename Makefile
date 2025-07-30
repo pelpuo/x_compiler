@@ -177,6 +177,30 @@ src/TAC_to_ASM.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/comp.dir/build.make CMakeFiles/comp.dir/src/TAC_to_ASM.cpp.s
 .PHONY : src/TAC_to_ASM.cpp.s
 
+src/TypeChecker.o: src/TypeChecker.cpp.o
+.PHONY : src/TypeChecker.o
+
+# target to build an object file
+src/TypeChecker.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/comp.dir/build.make CMakeFiles/comp.dir/src/TypeChecker.cpp.o
+.PHONY : src/TypeChecker.cpp.o
+
+src/TypeChecker.i: src/TypeChecker.cpp.i
+.PHONY : src/TypeChecker.i
+
+# target to preprocess a source file
+src/TypeChecker.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/comp.dir/build.make CMakeFiles/comp.dir/src/TypeChecker.cpp.i
+.PHONY : src/TypeChecker.cpp.i
+
+src/TypeChecker.s: src/TypeChecker.cpp.s
+.PHONY : src/TypeChecker.s
+
+# target to generate assembly for a file
+src/TypeChecker.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/comp.dir/build.make CMakeFiles/comp.dir/src/TypeChecker.cpp.s
+.PHONY : src/TypeChecker.cpp.s
+
 src/codeGen.o: src/codeGen.cpp.o
 .PHONY : src/codeGen.o
 
@@ -288,6 +312,9 @@ help:
 	@echo "... src/TAC_to_ASM.o"
 	@echo "... src/TAC_to_ASM.i"
 	@echo "... src/TAC_to_ASM.s"
+	@echo "... src/TypeChecker.o"
+	@echo "... src/TypeChecker.i"
+	@echo "... src/TypeChecker.s"
 	@echo "... src/codeGen.o"
 	@echo "... src/codeGen.i"
 	@echo "... src/codeGen.s"

@@ -28,7 +28,13 @@ void Lexer::next(Token &token) {
       token.type = TokenType::RETURN;
     } else if (value == "int") {
       token.type = TokenType::INT;
-    } else if (value == "void") {
+    }else if(value == "long") {
+      token.type = TokenType::LONG;
+    }else if(value == "const") {
+      token.type = TokenType::CONST;
+    }else if(value == "unsigned") {
+      token.type = TokenType::UNSIGNED;
+    }else if (value == "void") {
       token.type = TokenType::VOID;
     }else if(value == "if"){
       token.type = TokenType::IF;
@@ -67,10 +73,17 @@ void Lexer::next(Token &token) {
   if (isdigit(*BufferPtr)) {
     const char *end = BufferPtr + 1;
     while (isdigit(*end))
-      ++end;
-
+    ++end;
+    
     std::string value(BufferPtr, end);
-    token.type = TokenType::NUM;
+    
+    if (*end == 'L' || *end == 'l') {
+      end++;
+      token.type = TokenType::LONG_CONST;
+    } else {
+      token.type = TokenType::NUM;
+    }
+
     token.value = value;
     token.line = line;
 

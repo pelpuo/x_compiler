@@ -33,6 +33,11 @@ riscv64-unknown-linux-gnu-gcc -o aprog aprog.o -march=rv64imafd -mabi=lp64d -sta
 
 
 ### Bug fixes
+* static functions
+* extern
+* type checking 232
+
+* global variables
 * Data Types
 * Data Structures
 * Register Allocation

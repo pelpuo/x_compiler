@@ -2,6 +2,7 @@
 
 #include "lexer.h"
 #include "AST.h"
+#include "Type.h"
 #include <iostream>
 
 using namespace std;
@@ -18,6 +19,7 @@ class Parser{
         int getPrecedence(TokenType op);
         bool isBinaryOp(TokenType type);
         bool isCompoundAssignOp(TokenType type);
+        bool isTypeSpecifier(TokenType type);
 
         ASTProgram *parseProgram();
         FuncDecl *parseFunction();
@@ -27,12 +29,16 @@ class Parser{
         Expr *parseExpr(int minPrec = 0);
         Expr *parseTerm();
         Expr *parseFactor();
+        Expr *parseCast();
+        Expr *parseConstant();
         Declaration *parseDeclaration();
-        VarDecl *parseVarDecl(const string &varName);
-        FuncDecl *parseFuncDecl(const string &funcName);
-        FuncDecl *parseFuncDeclOrProto(const string &funcName);
+        VarDecl *parseVarDecl(const string &varName, std::unique_ptr<Type> type);
+        FuncDecl *parseFuncDecl(const string &funcName, std::unique_ptr<Type> returnType);
+        FuncDecl *parseFuncDeclOrProto(const string &funcName, std::unique_ptr<Type> returnType);
         ExprStmt *parseExprStmt();
-        std::pair<TypeSpecifier, StorageClass> parseTypeAndStorageClass();
+        TypeSpecifier parseType(std::vector<TypeSpecifier> &types);
+        std::tuple<std::unique_ptr<Type>, StorageClass, TypeQualifier> parseTypeAndStorageClass();
+
         
     public:
         Parser(Lexer &lex);

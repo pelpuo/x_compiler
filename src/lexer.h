@@ -15,6 +15,18 @@ enum class StorageClass {
 
 enum class TypeSpecifier {
   INT,
+  LONG,
+  // Add these if needed later: UNSIGNED, LONG, etc.
+};
+
+enum class TypeQualifier {
+  NONE,
+  CONST
+};
+
+static std::string TypeSpecifierString[] = {
+  "int",
+  "long",
   // Add these if needed later: UNSIGNED, LONG, etc.
 };
 
@@ -35,6 +47,9 @@ typedef enum{
     ID,
     RETURN,
     INT,
+    LONG,
+    LONG_CONST,
+    UNSIGNED,
     VOID,
     INCREMENT,
     DECREMENT,
@@ -87,7 +102,8 @@ typedef enum{
     DEFAULT,
 
     EXTERN,
-    STATIC
+    STATIC,
+    CONST
 }TokenType;
 
 static string TokenStr[] = {

@@ -176,13 +176,15 @@ CMakeFiles/comp.dir/src/codeGen.cpp.o: \
  /usr/include/x86_64-linux-gnu/c++/11/bits/c++io.h \
  /usr/include/c++/11/bits/fstream.tcc \
  /home/panda/Documents/Github/micomp/src/AST.h \
- /home/panda/Documents/Github/micomp/src/lexer.h \
+ /home/panda/Documents/Github/micomp/src/SymbolTable.h \
  /usr/include/c++/11/optional \
  /usr/include/c++/11/bits/enable_special_members.h \
- /home/panda/Documents/Github/micomp/src/TAC.h \
- /home/panda/Documents/Github/micomp/src/SymbolTable.h \
  /usr/include/c++/11/unordered_map /usr/include/c++/11/bits/hashtable.h \
  /usr/include/c++/11/bits/hashtable_policy.h \
  /usr/include/c++/11/bits/node_handle.h \
  /usr/include/c++/11/bits/unordered_map.h \
- /usr/include/c++/11/bits/erase_if.h
+ /usr/include/c++/11/bits/erase_if.h \
+ /home/panda/Documents/Github/micomp/src/Type.h \
+ /home/panda/Documents/Github/micomp/src/lexer.h \
+ /home/panda/Documents/Github/micomp/src/TAC.h \
+ /home/panda/Documents/Github/micomp/src/TypeChecker.h
