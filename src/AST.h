@@ -1177,7 +1177,9 @@ public:
     expr->resolveSymbol(symTab);
   }
 
-  Expr *typeCheck(SymbolTable &symTab) override { expr->typeCheck(symTab); }
+  Expr *typeCheck(SymbolTable &symTab) override {
+    return expr->typeCheck(symTab);
+  }
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -1213,8 +1215,7 @@ public:
 
   Expr *typeCheck(SymbolTable &symTab) override {
     cout << "Typechecking ReturnStmt" << endl;
-    if (expr)
-      expr->typeCheck(symTab);
+    return expr ? expr->typeCheck(symTab) : nullptr;
   }
 };
 
@@ -1321,6 +1322,8 @@ public:
     if (elseBlock)
       elseBlock->typeCheck(symTab);
     symTab.exitScope();
+
+    return nullptr; // IfStmt doesn't return a value
   }
 };
 
@@ -1393,6 +1396,8 @@ public:
     condition->typeCheck(symTab);
     body->typeCheck(symTab);
     symTab.exitScope();
+
+    return nullptr; // WhileStmt doesn't return a value
   }
 };
 
@@ -1483,6 +1488,8 @@ public:
     inc->typeCheck(symTab);
     body->typeCheck(symTab);
     symTab.exitScope();
+
+    return nullptr;
   }
 };
 
@@ -1552,6 +1559,8 @@ public:
     cond->typeCheck(symTab);
     body->typeCheck(symTab);
     symTab.exitScope();
+
+    return nullptr; // DoWhileStmt doesn't return a value
   }
 };
 
@@ -1582,6 +1591,7 @@ public:
 
   Expr *typeCheck(SymbolTable &symTab) override {
     // Nothing to type check
+    return nullptr; // BreakStmt doesn't return a value
   }
 };
 
@@ -1610,6 +1620,7 @@ public:
 
   Expr *typeCheck(SymbolTable &symTab) override {
     // Nothing to type check
+    return nullptr; // ContinueStmt doesn't return a value
   }
 };
 
@@ -1730,6 +1741,7 @@ public:
     if (defaultCase)
       defaultCase->typeCheck(symTab);
     symTab.exitScope();
+    return nullptr; // SwitchStmt doesn't return a value
   }
 };
 
