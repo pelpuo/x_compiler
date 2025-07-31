@@ -53,6 +53,8 @@
         "typeinfo": "cpp",
         "list": "cpp",
         "map": "cpp",
-        "set": "cpp"
+        "set": "cpp",
+        "mutex": "cpp",
+        "shared_mutex": "cpp"
     }
 }

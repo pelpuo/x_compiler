@@ -2,7 +2,8 @@
 #include "TypeChecker.h"
 
 Expr *TypeChecker::typecheck(Expr *e, SymbolTable &symbols) {
-  // cout << "Typechecking expression: " << endl;
+  cout << "Typechecking expression: ";
+  e->print();
 
   if (auto *v = dynamic_cast<Variable *>(e)) {
     return typecheck_var(v, symbols);
@@ -174,7 +175,8 @@ Expr *TypeChecker::typecheck_funccall(FuncCall *call, SymbolTable &symbols) {
 
 Expr *TypeChecker::convert_to(Expr *e, const Type *target) {
   cout << "Converting " << e->getExprType()->toString()
-       << " to " << target->toString() << std::endl;
+      << " to " << target->toString() << "for expression: ";
+      e->print();
 
   if (e->getExprType()->getKind() == target->getKind())
     return e;

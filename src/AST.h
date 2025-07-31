@@ -93,6 +93,8 @@ public:
   virtual ~BlockItem() = default;
   virtual void print() = 0;
   virtual std::vector<TAC> generateTAC(std::string &tempVar) = 0;
+  virtual void resolveSymbol(SymbolTable &symTab) = 0;
+  virtual void typeCheck(SymbolTable &symTab) = 0;
 };
 
 class Declaration : public BlockItem {
@@ -100,6 +102,8 @@ public:
   virtual ~Declaration() = default;
   virtual void print() = 0;
   virtual std::vector<TAC> generateTAC(std::string &tempVar) = 0;
+  virtual void resolveSymbol(SymbolTable &symTab) = 0;
+  virtual void typeCheck(SymbolTable &symTab) = 0;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -865,6 +869,8 @@ public:
   void resolveSymbol(SymbolTable &symTab) override {
     symTab.enterScope();
     for (auto &item : items) {
+      std::cerr << "[DEBUG] Resolving BlockItem...\n";
+      item->print();
       item->resolveSymbol(symTab);
     }
     symTab.exitScope();
@@ -1050,6 +1056,15 @@ public:
     }
     symTab.exitScope();
   }
+  
+  void typeCheck(SymbolTable &symTab) override {
+    if (condition) condition->typeCheck(symTab);
+    symTab.enterScope();
+    if (thenBlock) thenBlock->typeCheck(symTab);
+    if (elseBlock) elseBlock->typeCheck(symTab);
+    symTab.exitScope();
+  }
+  
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -1114,10 +1129,12 @@ public:
     body->resolveSymbol(symTab);
     symTab.exitScope();
   }
-
+  
   void typeCheck(SymbolTable &symTab) override {
+    symTab.enterScope();
     condition->typeCheck(symTab);
     body->typeCheck(symTab);
+    symTab.exitScope();
   }
 };
 
@@ -1199,12 +1216,14 @@ public:
     body->resolveSymbol(symTab);
     symTab.exitScope();
   }
-
+  
   void typeCheck(SymbolTable &symTab) override {
+    symTab.enterScope();
     init->typeCheck(symTab);
     cond->typeCheck(symTab);
     inc->typeCheck(symTab);
     body->typeCheck(symTab);
+    symTab.exitScope();
   }
 };
 
@@ -1267,10 +1286,12 @@ public:
     cond->resolveSymbol(symTab);
     symTab.exitScope();
   }
-
+  
   void typeCheck(SymbolTable &symTab) override {
+    symTab.enterScope();
     cond->typeCheck(symTab);
     body->typeCheck(symTab);
+    symTab.exitScope();
   }
 };
 
@@ -1298,6 +1319,11 @@ public:
   }
 
   void resolveSymbol(SymbolTable &symTab) override {}
+
+  void typeCheck(SymbolTable &symTab) override {
+    // Nothing to type check
+  }
+  
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -1322,6 +1348,11 @@ public:
   }
 
   void resolveSymbol(SymbolTable &symTab) override {}
+
+  void typeCheck(SymbolTable &symTab) override {
+    // Nothing to type check
+  }
+  
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -1428,6 +1459,19 @@ public:
     }
     symTab.exitScope();
   }
+  
+  void typeCheck(SymbolTable &symTab) override {
+    if (expr) expr->typeCheck(symTab);
+    symTab.enterScope();
+    for (auto &case_ : cases) {
+      case_.first->typeCheck(symTab);
+      case_.second->typeCheck(symTab);
+    }
+    if (defaultCase)
+    defaultCase->typeCheck(symTab);
+    symTab.exitScope();
+  }
+  
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -1530,6 +1574,11 @@ public:
 
     std::cerr << "[DEBUG] Resolving symbol "<< name << "\n";
 
+    if (!symTab.resolve(name)) {
+      std::cerr << "<SymbolResolution> ERROR: Undeclared variable '" << name << "'\n";
+      exit(1);
+    }
+
     if (initializer) {
       initializer->resolveSymbol(symTab);
     }
@@ -1564,6 +1613,35 @@ public:
       }
     }
   }
+
+  // void typeCheck(SymbolTable &symTab) override {
+  //   TypeChecker checker;
+  
+  //   if (initializer) {
+  //     initializer->typeCheck(symTab);  // typecheck first
+  //   }
+  
+  //   if (!symTab.declareVariable(name, type->clone())) {
+  //     std::cerr << "ERROR: Redeclaration of variable '" << name << "'\n";
+  //     exit(1);
+  //   }
+  
+  //   std::cerr << "[SymbolTable] Declaring '" << name << "'\n";
+  
+  //   if (initializer) {
+  //     const Type *initType = initializer->getExprType();
+  //     const Type *declType = type.get();
+  
+  //     if (!initType || !declType) {
+  //       std::cerr << "ERROR: Missing type in variable declaration '" << name << "'\n";
+  //       exit(1);
+  //     }
+  
+  //     if (initType->getKind() != declType->getKind()) {
+  //       initializer.reset(checker.convert_to(initializer.release(), declType));
+  //     }
+  //   }
+  // }
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -1726,21 +1804,23 @@ public:
   void resolveSymbol(SymbolTable &symTab) override {
     symTab.enterScope();
     for (auto &proto : prototypes)
-      proto->resolveSymbol(symTab); // Only declares symbol
+    proto->resolveSymbol(symTab); // Only declares symbol
     for (auto &func : functions)
-      func->resolveSymbol(symTab);
+    func->resolveSymbol(symTab);
     symTab.exitScope();
   }
-
+  
   void typeCheck(SymbolTable &symTab) override {
+    symTab.enterScope();
     for (auto &proto : prototypes) {
       proto->typeCheck(symTab);
     }
     for (auto &func : functions) {
       func->typeCheck(symTab);
     }
+    symTab.exitScope();
   }
-
+  
   std::vector<TAC> convertSymbolsToTAC(const SymbolTable &symTab) {
     std::vector<TAC> TACdefs;
 

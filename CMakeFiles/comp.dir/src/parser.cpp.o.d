@@ -1,8 +1,8 @@
 CMakeFiles/comp.dir/src/parser.cpp.o: \
- /home/panda/Documents/Github/micomp/src/parser.cpp \
+ /home/local/ASUAD/ekayang/Documents/Github/x_compiler/src/parser.cpp \
  /usr/include/stdc-predef.h \
- /home/panda/Documents/Github/micomp/src/parser.h \
- /home/panda/Documents/Github/micomp/src/lexer.h \
+ /home/local/ASUAD/ekayang/Documents/Github/x_compiler/src/parser.h \
+ /home/local/ASUAD/ekayang/Documents/Github/x_compiler/src/lexer.h \
  /usr/include/c++/11/string \
  /usr/include/x86_64-linux-gnu/c++/11/bits/c++config.h \
  /usr/include/x86_64-linux-gnu/c++/11/bits/os_defines.h \
@@ -140,8 +140,8 @@ CMakeFiles/comp.dir/src/parser.cpp.o: \
  /usr/include/c++/11/bits/stl_vector.h \
  /usr/include/c++/11/bits/stl_bvector.h \
  /usr/include/c++/11/bits/vector.tcc \
- /home/panda/Documents/Github/micomp/src/AST.h \
- /home/panda/Documents/Github/micomp/src/SymbolTable.h \
+ /home/local/ASUAD/ekayang/Documents/Github/x_compiler/src/AST.h \
+ /home/local/ASUAD/ekayang/Documents/Github/x_compiler/src/SymbolTable.h \
  /usr/include/c++/11/iostream /usr/include/c++/11/ostream \
  /usr/include/c++/11/ios /usr/include/c++/11/bits/ios_base.h \
  /usr/include/c++/11/bits/locale_classes.h \
@@ -167,7 +167,7 @@ CMakeFiles/comp.dir/src/parser.cpp.o: \
  /usr/include/c++/11/bits/invoke.h /usr/include/c++/11/bits/node_handle.h \
  /usr/include/c++/11/bits/unordered_map.h \
  /usr/include/c++/11/bits/erase_if.h \
- /home/panda/Documents/Github/micomp/src/Type.h \
+ /home/local/ASUAD/ekayang/Documents/Github/x_compiler/src/Type.h \
  /usr/include/c++/11/memory /usr/include/c++/11/bits/stl_tempbuf.h \
  /usr/include/c++/11/bits/stl_raw_storage_iter.h \
  /usr/include/c++/11/bits/align.h /usr/include/c++/11/bit \
@@ -182,9 +182,9 @@ CMakeFiles/comp.dir/src/parser.cpp.o: \
  /usr/include/c++/11/backward/auto_ptr.h \
  /usr/include/c++/11/pstl/glue_memory_defs.h \
  /usr/include/c++/11/pstl/execution_defs.h \
- /home/panda/Documents/Github/micomp/src/TAC.h \
+ /home/local/ASUAD/ekayang/Documents/Github/x_compiler/src/TAC.h \
  /usr/include/c++/11/fstream /usr/include/c++/11/bits/codecvt.h \
  /usr/include/x86_64-linux-gnu/c++/11/bits/basic_file.h \
  /usr/include/x86_64-linux-gnu/c++/11/bits/c++io.h \
  /usr/include/c++/11/bits/fstream.tcc \
- /home/panda/Documents/Github/micomp/src/TypeChecker.h
+ /home/local/ASUAD/ekayang/Documents/Github/x_compiler/src/TypeChecker.h
