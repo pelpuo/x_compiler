@@ -594,6 +594,7 @@ public:
       exit(1);
     }
 
+    // Update operand if typeCheck replaced it
     if (innerResult != operand.get()) {
       operand.reset(innerResult);
     }
@@ -604,6 +605,7 @@ public:
       exit(1);
     }
 
+    // Set result type
     if (op == TokenType::LOGICAL_NOT) {
       this->setExprType(std::make_unique<IntType>());
     } else {
