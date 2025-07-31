@@ -27,7 +27,9 @@ Expr *TypeChecker::typecheck(Expr *e, SymbolTable &symbols) {
   }
 }
 
+// Done
 Expr *TypeChecker::typecheck_var(Variable *v, SymbolTable &symbols) {
+  cout << "Typechecking Variable: " << v->name << endl;
   auto infoOpt = symbols.resolve(v->name);
   if (!infoOpt) {
     std::cerr << "<TypeChecker> ERROR: Undeclared variable '" << v->name << "'\n";
@@ -41,26 +43,34 @@ Expr *TypeChecker::typecheck_var(Variable *v, SymbolTable &symbols) {
   }
 
   v->setExprType(info.declaredType->clone());
+  cout << "Typechecked Variable: " << v->name << ", type: " << v->getExprType()->toString() << endl;
   return v;
 }
 
+// Done
 Expr *TypeChecker::typecheck_constint(ConstInt *c) {
+  cout << "Typechecking ConstInt: " << c->value << endl;
   c->setExprType(std::make_unique<IntType>());
   return c;
 }
 
+// Done
 Expr *TypeChecker::typecheck_constlong(ConstLong *c) {
+  cout << "Typechecking ConstLong: " << c->value << endl;
   c->setExprType(std::make_unique<LongType>());
   return c;
 }
 
+// Done
 Expr *TypeChecker::typecheck_cast(Cast *c, SymbolTable &symbols) {
+  cout << "Typechecking Cast: " << c->type->toString() << endl;
   Expr *inner = typecheck(c->expr.get(), symbols);
   c->expr.reset(inner);
   c->setExprType(c->type->clone());
   return c;
 }
 
+// Done
 Expr *TypeChecker::typecheck_unary(UnaryOp *u, SymbolTable &symbols) {
   Expr *inner = typecheck(u->operand.get(), symbols);
   u->operand.reset(inner);
@@ -72,50 +82,55 @@ Expr *TypeChecker::typecheck_unary(UnaryOp *u, SymbolTable &symbols) {
   return u;
 }
 
+// Done
 Expr *TypeChecker::typecheck_binary(BinaryOp *b, SymbolTable &symbols) {
+  cout << "Typechecking BinaryOp: " << b->op << endl;
   Expr *lhs = typecheck(b->left.get(), symbols);
   Expr *rhs = typecheck(b->right.get(), symbols);
-  b->left.reset(lhs);
-  b->right.reset(rhs);
-
+  // b->left.reset(lhs);
+  // b->right.reset(rhs);
+  
   const Type *lt = lhs->getExprType();
   const Type *rt = rhs->getExprType();
   if (!lt || !rt) {
     std::cerr << "<TypeChecker> ERROR: Missing type info in binary operands\n";
     exit(1);
   }
-
+  
   if (b->op == TokenType::LOGICAL_AND || b->op == TokenType::LOGICAL_OR) {
     b->setExprType(std::make_unique<IntType>());
     return b;
   }
-
+  
   const Type *common = get_common_type(lt, rt);
   lhs = convert_to(lhs, common);
   rhs = convert_to(rhs, common);
   b->left.reset(lhs);
   b->right.reset(rhs);
-
+  
   std::unique_ptr<Type> result;
   switch (b->op) {
-  case TokenType::PLUS:
-  case TokenType::MINUS:
-  case TokenType::MUL:
-  case TokenType::DIV:
-  case TokenType::MOD:
+    case TokenType::PLUS:
+    case TokenType::MINUS:
+    case TokenType::MUL:
+    case TokenType::DIV:
+    case TokenType::MOD:
     result = common->clone();
     break;
-  default:
+    default:
     result = std::make_unique<IntType>();
     break;
   }
-
+  
   b->setExprType(std::move(result));
   return b;
 }
 
+// Done
 Expr *TypeChecker::typecheck_assignment(Assignment *a, SymbolTable &symbols) {
   // Typecheck both sides
+  cout << "Typechecking Assignment: ";
+  a->print();
   std::unique_ptr<Expr> lhs(typecheck(a->name.release(), symbols));
   std::unique_ptr<Expr> rhs(typecheck(a->value.release(), symbols));
 
@@ -139,7 +154,9 @@ Expr *TypeChecker::typecheck_assignment(Assignment *a, SymbolTable &symbols) {
   return a;
 }
 
+// Done
 Expr *TypeChecker::typecheck_funccall(FuncCall *call, SymbolTable &symbols) {
+  cout << "Typechecking FuncCall: " << call->name << endl;
   auto infoOpt = symbols.resolve(call->name);
   if (!infoOpt.has_value()) {
     std::cerr << "<TypeChecker> ERROR: Call to undeclared function " << call->name << "\n";
@@ -174,9 +191,9 @@ Expr *TypeChecker::typecheck_funccall(FuncCall *call, SymbolTable &symbols) {
 }
 
 Expr *TypeChecker::convert_to(Expr *e, const Type *target) {
-  cout << "Converting " << e->getExprType()->toString()
-      << " to " << target->toString() << "for expression: ";
-      e->print();
+  // cout << "Converting " << e->getExprType()->toString()
+  //     << " to " << target->toString() << "for expression: ";
+  //     e->print();
 
   if (e->getExprType()->getKind() == target->getKind())
     return e;
@@ -186,10 +203,21 @@ Expr *TypeChecker::convert_to(Expr *e, const Type *target) {
 }
 
 const Type *TypeChecker::get_common_type(const Type *t1, const Type *t2) {
-  if (t1->getKind() == t2->getKind())
-    return t1;
-  // return new LongType();
-  static LongType longTypeSingleton;
-  return &longTypeSingleton;
+  // std::cout << "I am here!!!" << std::endl;
+
+  if (!t1 || !t2) {
+    std::cerr << "ERROR: get_common_type received null type\n";
+    exit(1); // Or handle more gracefully
+  }
+
+  // std::cout << "Finding common type for: " << t1->toString()
+  //           << " and " << t2->toString() << std::endl;
+
+  if (t1->getKind() == t2->getKind()) return t1;
+
+  static LongType longSingleton;
+  return &longSingleton;
 }
+
+
 // };

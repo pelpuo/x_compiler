@@ -14,8 +14,11 @@ class BinaryOp;
 class Assignment;
 class FuncCall;
 
+
 class TypeChecker {
 public:
+  static Expr *convert_to(Expr *e, const Type *target);
+  static const Type *get_common_type(const Type *t1, const Type *t2);
   Expr *typecheck(Expr *e, SymbolTable &symbols);
   Expr *typecheck_var(Variable *v, SymbolTable &symbols);
   Expr *typecheck_constint(ConstInt *c);
@@ -25,6 +28,4 @@ public:
   Expr *typecheck_binary(BinaryOp *b, SymbolTable &symbols);
   Expr *typecheck_assignment(Assignment *a, SymbolTable &symbols);
   Expr *typecheck_funccall(FuncCall *call, SymbolTable &symbols);
-  Expr *convert_to(Expr *e, const Type *target);
-  const Type *get_common_type(const Type *t1, const Type *t2);
 };

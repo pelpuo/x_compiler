@@ -240,8 +240,8 @@ public:
         return false;
       scopes.back()[name] = std::move(info);
     }
-    std::cerr << "[SymbolTable] (declare) Scope depth = " << scopes.size() << "\n";
-    std::cerr << "[SymbolTable] Declaring '" << name << "'\n";
+    // std::cerr << "[SymbolTable] (declare) Scope depth = " << scopes.size() << "\n";
+    // std::cerr << "[SymbolTable] Declaring '" << name << "'\n";
 
     return true;
   }
@@ -312,8 +312,8 @@ public:
   }
 
   std::optional<SymbolInfo> resolve(const std::string &name) {
-    std::cerr << "[SymbolTable] (resolve) Scope depth = " << scopes.size() << "\n";
-    std::cerr << "[SymbolTable] Resolving '" << name << "'\n";
+    // std::cerr << "[SymbolTable] (resolve) Scope depth = " << scopes.size() << "\n";
+    // std::cerr << "[SymbolTable] Resolving '" << name << "'\n";
 
     for (auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
       if (it->count(name))

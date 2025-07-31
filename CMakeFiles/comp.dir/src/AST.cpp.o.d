@@ -1,8 +1,7 @@
 CMakeFiles/comp.dir/src/AST.cpp.o: \
- /home/local/ASUAD/ekayang/Documents/Github/x_compiler/src/AST.cpp \
- /usr/include/stdc-predef.h \
- /home/local/ASUAD/ekayang/Documents/Github/x_compiler/src/AST.h \
- /home/local/ASUAD/ekayang/Documents/Github/x_compiler/src/SymbolTable.h \
+ /home/panda/Documents/Github/micomp/src/AST.cpp \
+ /usr/include/stdc-predef.h /home/panda/Documents/Github/micomp/src/AST.h \
+ /home/panda/Documents/Github/micomp/src/SymbolTable.h \
  /usr/include/c++/11/iostream \
  /usr/include/x86_64-linux-gnu/c++/11/bits/c++config.h \
  /usr/include/x86_64-linux-gnu/c++/11/bits/os_defines.h \
@@ -163,7 +162,7 @@ CMakeFiles/comp.dir/src/AST.cpp.o: \
  /usr/include/c++/11/bits/stl_vector.h \
  /usr/include/c++/11/bits/stl_bvector.h \
  /usr/include/c++/11/bits/vector.tcc \
- /home/local/ASUAD/ekayang/Documents/Github/x_compiler/src/Type.h \
+ /home/panda/Documents/Github/micomp/src/Type.h \
  /usr/include/c++/11/memory /usr/include/c++/11/bits/stl_tempbuf.h \
  /usr/include/c++/11/bits/stl_raw_storage_iter.h \
  /usr/include/c++/11/bits/align.h /usr/include/c++/11/bit \
@@ -178,10 +177,10 @@ CMakeFiles/comp.dir/src/AST.cpp.o: \
  /usr/include/c++/11/backward/auto_ptr.h \
  /usr/include/c++/11/pstl/glue_memory_defs.h \
  /usr/include/c++/11/pstl/execution_defs.h \
- /home/local/ASUAD/ekayang/Documents/Github/x_compiler/src/lexer.h \
- /home/local/ASUAD/ekayang/Documents/Github/x_compiler/src/TAC.h \
+ /home/panda/Documents/Github/micomp/src/lexer.h \
+ /home/panda/Documents/Github/micomp/src/TAC.h \
  /usr/include/c++/11/fstream /usr/include/c++/11/bits/codecvt.h \
  /usr/include/x86_64-linux-gnu/c++/11/bits/basic_file.h \
  /usr/include/x86_64-linux-gnu/c++/11/bits/c++io.h \
  /usr/include/c++/11/bits/fstream.tcc \
- /home/local/ASUAD/ekayang/Documents/Github/x_compiler/src/TypeChecker.h
+ /home/panda/Documents/Github/micomp/src/TypeChecker.h

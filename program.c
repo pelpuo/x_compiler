@@ -3,11 +3,16 @@ int main() {
     // static long counter2 = 7L;
     // int z = counter + counter2;
     
-    int a = 12;
-    int b = 32L;
+    // int a = 12;
+    // long b = 32L;
     
-    long int c = b + a; 
+    // long int c = b + a; 
+
+    int result = 1;
+    for (int i = 1; i <= 10; i++) {
+        result = result * i;
+    }
     
-    return c;
+    return result;
  }
 

@@ -40,9 +40,11 @@ int main(int argc, char ** argv){
     SymbolTable symTab;
     // TypeChecker typeChecker;
     prog->resolveSymbol(symTab);
+    // cout << "-------------------------------------" << endl;
     prog->typeCheck(symTab);
 
-    prog->print();
+    // cout << "-------------------------------------" << endl;
+    // prog->print();
 
     string tempVar;
     std::vector<TAC> tacCode = prog->generateTAC(tempVar, symTab);

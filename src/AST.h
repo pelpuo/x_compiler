@@ -66,7 +66,7 @@ public:
   virtual ~AST() = default;
   virtual std::vector<TAC> generateTAC(std::string &tempVar) = 0;
   virtual void resolveSymbol(SymbolTable &symTab) {}
-  virtual void typeCheck(SymbolTable &symTab) {}
+  virtual Expr *typeCheck(SymbolTable &symTab) {}
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -94,7 +94,7 @@ public:
   virtual void print() = 0;
   virtual std::vector<TAC> generateTAC(std::string &tempVar) = 0;
   virtual void resolveSymbol(SymbolTable &symTab) = 0;
-  virtual void typeCheck(SymbolTable &symTab) = 0;
+  virtual Expr *typeCheck(SymbolTable &symTab) = 0;
 };
 
 class Declaration : public BlockItem {
@@ -103,7 +103,7 @@ public:
   virtual void print() = 0;
   virtual std::vector<TAC> generateTAC(std::string &tempVar) = 0;
   virtual void resolveSymbol(SymbolTable &symTab) = 0;
-  virtual void typeCheck(SymbolTable &symTab) = 0;
+  virtual Expr *typeCheck(SymbolTable &symTab) = 0;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -124,7 +124,7 @@ public:
 
 //   void resolveSymbol(SymbolTable &symTab) override {}
 
-//   void typeCheck(SymbolTable &symTab) override {
+//   Expr *typeCheck(SymbolTable &symTab) override {
 //     TypeChecker checker;
 //     Expr *res = checker.typecheck(this, symTab);
 //     this->expType = res->getExprType()->clone(); // optional, for safety
@@ -154,10 +154,9 @@ public:
   }
   void resolveSymbol(SymbolTable &symTab) override {}
 
-  void typeCheck(SymbolTable &symTab) override {
-    TypeChecker checker;
-    Expr *res = checker.typecheck(this, symTab);
-    this->expType = res->getExprType()->clone(); // optional, for safety
+  Expr *typeCheck(SymbolTable &symTab) override {
+    this->setExprType(std::make_unique<IntType>());
+    return this;
   }
 };
 
@@ -177,10 +176,9 @@ public:
   }
   void resolveSymbol(SymbolTable &symTab) override {}
 
-  void typeCheck(SymbolTable &symTab) override {
-    TypeChecker checker;
-    Expr *res = checker.typecheck(this, symTab);
-    this->expType = res->getExprType()->clone(); // optional, for safety
+  Expr *typeCheck(SymbolTable &symTab) override {
+    this->setExprType(std::make_unique<LongType>());
+    return this;
   }
 };
 
@@ -243,6 +241,26 @@ public:
     code.push_back(TAC("StaticVariable", name, isGlobal ? "1" : "0", initStr));
     return code;
   }
+
+  void resolveSymbol(SymbolTable &symTab) override {
+    SymbolInfo info;
+    info.type = SymbolType::VARIABLE;
+    info.storageClass = isGlobal ? StorageClass::EXTERN : StorageClass::STATIC;
+    info.isGlobal = isGlobal;
+    info.declaredType = std::move(type);
+    info.initValue = {InitKind::Initial, init};
+
+    if (!symTab.declareFileScopeVariable(name, std::move(info.declaredType),
+                                         info.storageClass, info.initValue)) {
+      std::cerr << "ERROR: Failed to declare static variable: " << name << "\n";
+      exit(1);
+    }
+  }
+
+  Expr *typeCheck(SymbolTable &symTab) override {
+    // Type checking is not needed for static variables
+    return nullptr;
+  }
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -257,6 +275,12 @@ public:
   void print() { cout << "Variable: " << name << endl; }
 
   std::vector<TAC> generateTAC(std::string &tempVar) override {
+    if (!exprType) {
+      std::cerr << "ERROR: exprType is null in Variable '" << name
+                << "' during TAC generation.\n";
+      exit(1);
+    }
+
     std::vector<TAC> code;
     tempVar = "t" + std::to_string(tempVarCounter++);
     code.push_back(TAC("load", name, exprType->toString(), tempVar));
@@ -271,6 +295,31 @@ public:
     }
 
     exprType = symTab.resolve(name)->declaredType->clone();
+  }
+
+  Expr *typeCheck(SymbolTable &symTab) override {
+    std::cout << "Typechecking Variable: " << name << std::endl;
+
+    auto infoOpt = symTab.resolve(name);
+    if (!infoOpt.has_value()) {
+      std::cerr << "ERROR: Undeclared variable '" << name << "'\n";
+      exit(1);
+    }
+
+    const SymbolInfo &info = *infoOpt;
+    if (info.type == SymbolType::FUNCTION) {
+      std::cerr << "ERROR: Function name used as variable: " << name << "\n";
+      exit(1);
+    }
+
+    exprType = info.declaredType->clone();
+
+    this->setExprType(exprType->clone());
+
+    // std::cout << "Typechecked Variable: " << name
+    //           << ", type: " << exprType->toString() << std::endl;
+
+    return this;
   }
 };
 
@@ -391,13 +440,74 @@ public:
     right->resolveSymbol(symTab);
   }
 
-  void typeCheck(SymbolTable &symTab) override {
-    TypeChecker checker;
-    Expr *res = checker.typecheck(this, symTab);
-    this->expType = res->getExprType()->clone(); // optional, for safety
+  Expr *typeCheck(SymbolTable &symTab) override {
+    std::cout << "Typechecking BinaryOp: " << TokenStr[(int)op] << std::endl;
+
+    // Type check both children and reassign back into unique_ptrs
+    Expr *lhsResult = left->typeCheck(symTab);
+    if (lhsResult != left.get())
+      left.reset(lhsResult);
+
+    Expr *rhsResult = right->typeCheck(symTab);
+    if (rhsResult != right.get())
+      right.reset(rhsResult);
+
+    // cout << "Left type: " << left->getExprType()->toString()
+    //      << ", Right type: " << right->getExprType()->toString() <<
+    //      std::endl;
+
+    Expr *lhs = left.get();
+    Expr *rhs = right.get();
+
+    // Ensure types are available
+    const Type *lt = lhs->getExprType();
+    const Type *rt = rhs->getExprType();
+
+    if (!lt || !rt) {
+      std::cerr << "ERROR: Missing type in BinaryOp operands: ";
+      if (!lt)
+        std::cerr << "LHS type is null. ";
+      if (!rt)
+        std::cerr << "RHS type is null.";
+      std::cerr << std::endl;
+      exit(1);
+    }
+
+    // Logical ops always yield int
+    if (op == TokenType::LOGICAL_AND || op == TokenType::LOGICAL_OR) {
+      this->setExprType(std::make_unique<IntType>());
+      return this;
+    }
+
+    const Type *common = TypeChecker::get_common_type(lt, rt);
+    lhs = TypeChecker::convert_to(lhs, common);
+    rhs = TypeChecker::convert_to(rhs, common);
+
+    Expr *lhsCast = TypeChecker::convert_to(lhs, common);
+    if (lhsCast != lhs)
+      left.reset(lhsCast);
+
+    Expr *rhsCast = TypeChecker::convert_to(rhs, common);
+    if (rhsCast != rhs)
+      right.reset(rhsCast);
+
+    // Set result type based on operation
+    switch (op) {
+    case TokenType::PLUS:
+    case TokenType::MINUS:
+    case TokenType::MUL:
+    case TokenType::DIV:
+    case TokenType::MOD:
+      this->setExprType(common->clone());
+      break;
+    default:
+      this->setExprType(std::make_unique<IntType>());
+      break;
+    }
+
+    return this;
   }
 };
-
 //////////////////////////////////////////////////////////////////////////
 
 class UnaryOp : public Expr {
@@ -474,10 +584,33 @@ public:
     operand->resolveSymbol(symTab);
   }
 
-  void typeCheck(SymbolTable &symTab) override {
-    TypeChecker checker;
-    Expr *res = checker.typecheck(this, symTab);
-    this->expType = res->getExprType()->clone(); // optional, for safety
+  Expr *typeCheck(SymbolTable &symTab) override {
+    std::cout << "Typechecking UnaryOp: " << TokenStr[(int)op] << std::endl;
+
+    // Type check the operand
+    Expr *innerResult = operand->typeCheck(symTab);
+    if (!innerResult) {
+      std::cerr << "ERROR: UnaryOp operand typeCheck returned null\n";
+      exit(1);
+    }
+
+    if (innerResult != operand.get()) {
+      operand.reset(innerResult);
+    }
+
+    const Type *innerType = operand->getExprType();
+    if (!innerType) {
+      std::cerr << "ERROR: Missing exprType in UnaryOp operand\n";
+      exit(1);
+    }
+
+    if (op == TokenType::LOGICAL_NOT) {
+      this->setExprType(std::make_unique<IntType>());
+    } else {
+      this->setExprType(innerType->clone());
+    }
+
+    return this;
   }
 };
 // Initialize static member
@@ -530,10 +663,49 @@ public:
     value->resolveSymbol(symTab);
   }
 
-  void typeCheck(SymbolTable &symTab) override {
-    TypeChecker checker;
-    Expr *res = checker.typecheck(this, symTab);
-    this->expType = res->getExprType()->clone(); // optional, for safety
+  Expr *typeCheck(SymbolTable &symTab) override {
+    std::cout << "Typechecking Assignment: " << std::endl;
+    // Typecheck both sides
+    Expr *lhsChecked = name->typeCheck(symTab);
+    Expr *rhsChecked = value->typeCheck(symTab);
+
+    if (!lhsChecked || !rhsChecked) {
+      std::cerr << "ERROR: Assignment operands returned null expressions\n";
+      exit(1);
+    }
+
+    const Type *lt = lhsChecked->getExprType();
+    const Type *rt = rhsChecked->getExprType();
+
+    if (!lt || !rt) {
+      std::cerr << "ERROR: Assignment operands missing type info\n";
+      if (!lt)
+        std::cerr << "LHS type is null. ";
+      if (!rt)
+        std::cerr << "RHS type is null. ";
+      std::cerr << std::endl;
+      exit(1);
+    }
+
+    // Ensure LHS is an assignable l-value (e.g., variable)
+    if (!dynamic_cast<Variable *>(lhsChecked)) {
+      std::cerr
+          << "ERROR: LHS of assignment must be a variable (not an r-value)\n";
+      exit(1);
+    }
+
+    // Convert RHS to match LHS type
+    Expr *convertedRHS = TypeChecker::convert_to(rhsChecked, lt);
+
+    // Store updated expressions
+    if (lhsChecked != name.get())
+      name.reset(lhsChecked);
+    if (convertedRHS != value.get())
+      value.reset(convertedRHS);
+
+    // Set type of the assignment expression
+    this->setExprType(lt->clone());
+    return this;
   }
 };
 
@@ -617,10 +789,47 @@ public:
     right->resolveSymbol(symTab);
   }
 
-  void typeCheck(SymbolTable &symTab) override {
-    TypeChecker checker;
-    Expr *res = checker.typecheck(this, symTab);
-    this->expType = res->getExprType()->clone(); // optional, for safety
+  Expr *typeCheck(SymbolTable &symTab) override {
+    std::cout << "Typechecking CompoundAssignment: " << TokenStr[(int)op]
+              << std::endl;
+
+    // Typecheck both sides
+    Expr *lhsResult = left->typeCheck(symTab);
+    if (lhsResult != left.get())
+      left.reset(lhsResult);
+
+    Expr *rhsResult = right->typeCheck(symTab);
+    if (rhsResult != right.get())
+      right.reset(rhsResult);
+
+    const Type *lt = left->getExprType();
+    const Type *rt = right->getExprType();
+
+    if (!lt || !rt) {
+      std::cerr
+          << "ERROR: Missing type info in compound assignment operands.\n";
+      if (!lt)
+        std::cerr << "LHS is null. ";
+      if (!rt)
+        std::cerr << "RHS is null. ";
+      std::cerr << std::endl;
+      exit(1);
+    }
+
+    // Ensure LHS is a variable
+    if (!dynamic_cast<Variable *>(left.get())) {
+      std::cerr << "ERROR: LHS of compound assignment must be a variable\n";
+      exit(1);
+    }
+
+    // Convert RHS to LHS type
+    Expr *converted = TypeChecker::convert_to(right.get(), lt);
+    if (converted != right.get())
+      right.reset(converted);
+
+    // Result type of compound assignment is the LHS type
+    this->setExprType(lt->clone());
+    return this;
   }
 };
 
@@ -683,10 +892,17 @@ public:
     expr->resolveSymbol(symTab);
   }
 
-  void typeCheck(SymbolTable &symTab) override {
-    TypeChecker checker;
-    Expr *res = checker.typecheck(this, symTab);
-    this->expType = res->getExprType()->clone(); // optional, for safety
+  Expr *typeCheck(SymbolTable &symTab) override {
+    std::cout << "Typechecking Cast: " << type->toString() << std::endl;
+    // Typecheck the inner expression
+    Expr *innerResult = expr->typeCheck(symTab);
+    if (innerResult != expr.get()) {
+      expr.reset(innerResult);
+    }
+
+    // The result of a cast has the type we cast to
+    this->setExprType(type->clone());
+    return this;
   }
 };
 
@@ -757,7 +973,8 @@ public:
     falseExpr->resolveSymbol(symTab);
   }
 
-  void typeCheck(SymbolTable &symTab) override {
+  Expr *typeCheck(SymbolTable &symTab) override {
+    std::cout << "Typechecking TernaryOp" << std::endl;
     TypeChecker checker;
     Expr *res = checker.typecheck(this, symTab);
     this->expType = res->getExprType()->clone(); // optional, for safety
@@ -820,10 +1037,44 @@ public:
     }
   }
 
-  void typeCheck(SymbolTable &symTab) override {
-    TypeChecker checker;
-    Expr *res = checker.typecheck(this, symTab);
-    this->expType = res->getExprType()->clone(); // optional, for safety
+  Expr *typeCheck(SymbolTable &symTab) override {
+    std::cout << "Typechecking FuncCall: " << name << std::endl;
+
+    auto infoOpt = symTab.resolve(name);
+    if (!infoOpt.has_value()) {
+      std::cerr << "ERROR: Call to undeclared function " << name << "\n";
+      exit(1);
+    }
+
+    const SymbolInfo &info = *infoOpt;
+    if (!info.declaredType ||
+        info.declaredType->getKind() != Type::Kind::FUNCTION) {
+      std::cerr << "ERROR: Symbol is not a function: " << name << "\n";
+      exit(1);
+    }
+
+    const auto *fnType =
+        static_cast<const FunctionType *>(info.declaredType.get());
+    const auto &paramTypes = fnType->getParamTypes();
+
+    if (paramTypes.size() != args->size()) {
+      std::cerr << "ERROR: Function call argument count mismatch for function '"
+                << name << "'\n";
+      exit(1);
+    }
+
+    // Type check and coerce each argument
+    for (size_t i = 0; i < paramTypes.size(); ++i) {
+      Expr *arg = args->args[i]->typeCheck(symTab);
+      const Type *expected = paramTypes[i].get();
+      arg = TypeChecker::convert_to(arg, expected);
+      if (arg != args->args[i].get()) {
+        args->args[i].reset(arg);
+      }
+    }
+
+    this->setExprType(fnType->getReturnType()->clone());
+    return this;
   }
 };
 
@@ -869,14 +1120,14 @@ public:
   void resolveSymbol(SymbolTable &symTab) override {
     symTab.enterScope();
     for (auto &item : items) {
-      std::cerr << "[DEBUG] Resolving BlockItem...\n";
-      item->print();
+      // std::cerr << "[DEBUG] Resolving BlockItem...\n";
+      // item->print();
       item->resolveSymbol(symTab);
     }
     symTab.exitScope();
   }
 
-  void typeCheck(SymbolTable &symTab) override {
+  Expr *typeCheck(SymbolTable &symTab) override {
     symTab.enterScope();
     for (auto &item : items) {
       item->typeCheck(symTab);
@@ -924,7 +1175,7 @@ public:
     expr->resolveSymbol(symTab);
   }
 
-  void typeCheck(SymbolTable &symTab) override { expr->typeCheck(symTab); }
+  Expr *typeCheck(SymbolTable &symTab) override { expr->typeCheck(symTab); }
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -958,7 +1209,8 @@ public:
     expr->resolveSymbol(symTab);
   }
 
-  void typeCheck(SymbolTable &symTab) override {
+  Expr *typeCheck(SymbolTable &symTab) override {
+    cout << "Typechecking ReturnStmt" << endl;
     if (expr)
       expr->typeCheck(symTab);
   }
@@ -1056,15 +1308,18 @@ public:
     }
     symTab.exitScope();
   }
-  
-  void typeCheck(SymbolTable &symTab) override {
-    if (condition) condition->typeCheck(symTab);
+
+  Expr *typeCheck(SymbolTable &symTab) override {
+    cout << "Typechecking IfStmt" << endl;
+    if (condition)
+      condition->typeCheck(symTab);
     symTab.enterScope();
-    if (thenBlock) thenBlock->typeCheck(symTab);
-    if (elseBlock) elseBlock->typeCheck(symTab);
+    if (thenBlock)
+      thenBlock->typeCheck(symTab);
+    if (elseBlock)
+      elseBlock->typeCheck(symTab);
     symTab.exitScope();
   }
-  
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -1129,8 +1384,9 @@ public:
     body->resolveSymbol(symTab);
     symTab.exitScope();
   }
-  
-  void typeCheck(SymbolTable &symTab) override {
+
+  Expr *typeCheck(SymbolTable &symTab) override {
+    cout << "Typechecking WhileStmt" << endl;
     symTab.enterScope();
     condition->typeCheck(symTab);
     body->typeCheck(symTab);
@@ -1216,8 +1472,9 @@ public:
     body->resolveSymbol(symTab);
     symTab.exitScope();
   }
-  
-  void typeCheck(SymbolTable &symTab) override {
+
+  Expr *typeCheck(SymbolTable &symTab) override {
+    cout << "Typechecking ForStmt" << endl;
     symTab.enterScope();
     init->typeCheck(symTab);
     cond->typeCheck(symTab);
@@ -1286,8 +1543,9 @@ public:
     cond->resolveSymbol(symTab);
     symTab.exitScope();
   }
-  
-  void typeCheck(SymbolTable &symTab) override {
+
+  Expr *typeCheck(SymbolTable &symTab) override {
+    cout << "Typechecking DoWhileStmt" << endl;
     symTab.enterScope();
     cond->typeCheck(symTab);
     body->typeCheck(symTab);
@@ -1320,10 +1578,9 @@ public:
 
   void resolveSymbol(SymbolTable &symTab) override {}
 
-  void typeCheck(SymbolTable &symTab) override {
+  Expr *typeCheck(SymbolTable &symTab) override {
     // Nothing to type check
   }
-  
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -1349,10 +1606,9 @@ public:
 
   void resolveSymbol(SymbolTable &symTab) override {}
 
-  void typeCheck(SymbolTable &symTab) override {
+  Expr *typeCheck(SymbolTable &symTab) override {
     // Nothing to type check
   }
-  
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -1459,19 +1715,20 @@ public:
     }
     symTab.exitScope();
   }
-  
-  void typeCheck(SymbolTable &symTab) override {
-    if (expr) expr->typeCheck(symTab);
+
+  Expr *typeCheck(SymbolTable &symTab) override {
+    cout << "Type checking switch statement" << endl;
+    if (expr)
+      expr->typeCheck(symTab);
     symTab.enterScope();
     for (auto &case_ : cases) {
       case_.first->typeCheck(symTab);
       case_.second->typeCheck(symTab);
     }
     if (defaultCase)
-    defaultCase->typeCheck(symTab);
+      defaultCase->typeCheck(symTab);
     symTab.exitScope();
   }
-  
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -1572,15 +1829,17 @@ public:
       exit(1);
     }
 
-    std::cerr << "[DEBUG] Resolving symbol "<< name << "\n";
+    // std::cerr << "[DEBUG] Resolving symbol " << name << "\n";
 
     if (!symTab.resolve(name)) {
-      std::cerr << "<SymbolResolution> ERROR: Undeclared variable '" << name << "'\n";
+      std::cerr << "<SymbolResolution> ERROR: Undeclared variable '" << name
+                << "'\n";
       exit(1);
     }
 
     if (initializer) {
       initializer->resolveSymbol(symTab);
+      // initializer->typeCheck(symTab); // Ensure initializer is type-checked
     }
   }
 
@@ -1593,55 +1852,37 @@ public:
   void setQualifier(TypeQualifier q) { typeQualifier = q; }
   TypeQualifier getQualifier() const { return typeQualifier; }
 
-  void typeCheck(SymbolTable &symTab) override {
-    TypeChecker checker;
+  Expr *typeCheck(SymbolTable &symTab) override {
+    cout << "Type checking variable declaration: " << name << endl;
+    // Declare the variable first so it's available in its own initializer
+    if (!symTab.declareVariable(name, type->clone())) {
+      std::cerr << "ERROR: Redeclaration of variable '" << name << "'\n";
+      exit(1);
+    }
+
+    // std::cerr << "[SymbolTable] Declaring var '" << name << "'\n";
+
     if (initializer) {
-      initializer->typeCheck(symTab); // Typecheck the initializer expression
+      initializer->typeCheck(symTab); // This should now internally set expType
 
       const Type *initType = initializer->getExprType();
       const Type *declType = type.get();
 
       if (!initType || !declType) {
-        std::cerr << "ERROR: Missing type in variable declaration '" << name
+        std::cerr << "ERROR: Missing type in initializer for '" << name
                   << "'\n";
         exit(1);
       }
 
-      // If types don't match, insert implicit cast (e.g., int → long)
+      // Insert implicit cast if needed
       if (initType->getKind() != declType->getKind()) {
-        initializer.reset(checker.convert_to(initializer.release(), declType));
+        auto casted =
+            std::make_unique<Cast>(std::move(initializer), declType->clone());
+        casted->setExprType(declType->clone());
+        initializer = std::move(casted);
       }
     }
   }
-
-  // void typeCheck(SymbolTable &symTab) override {
-  //   TypeChecker checker;
-  
-  //   if (initializer) {
-  //     initializer->typeCheck(symTab);  // typecheck first
-  //   }
-  
-  //   if (!symTab.declareVariable(name, type->clone())) {
-  //     std::cerr << "ERROR: Redeclaration of variable '" << name << "'\n";
-  //     exit(1);
-  //   }
-  
-  //   std::cerr << "[SymbolTable] Declaring '" << name << "'\n";
-  
-  //   if (initializer) {
-  //     const Type *initType = initializer->getExprType();
-  //     const Type *declType = type.get();
-  
-  //     if (!initType || !declType) {
-  //       std::cerr << "ERROR: Missing type in variable declaration '" << name << "'\n";
-  //       exit(1);
-  //     }
-  
-  //     if (initType->getKind() != declType->getKind()) {
-  //       initializer.reset(checker.convert_to(initializer.release(), declType));
-  //     }
-  //   }
-  // }
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -1726,7 +1967,8 @@ public:
   void setType(std::unique_ptr<Type> t) { type = std::move(t); }
   const Type *getType() const { return type.get(); }
 
-  void typeCheck(SymbolTable &symTab) override {
+  Expr *typeCheck(SymbolTable &symTab) override {
+    cout << "Type checking function declaration: " << name << endl;
     if (body) {
       symTab.enterScope();
 
@@ -1804,13 +2046,13 @@ public:
   void resolveSymbol(SymbolTable &symTab) override {
     symTab.enterScope();
     for (auto &proto : prototypes)
-    proto->resolveSymbol(symTab); // Only declares symbol
+      proto->resolveSymbol(symTab); // Only declares symbol
     for (auto &func : functions)
-    func->resolveSymbol(symTab);
+      func->resolveSymbol(symTab);
     symTab.exitScope();
   }
-  
-  void typeCheck(SymbolTable &symTab) override {
+
+  Expr *typeCheck(SymbolTable &symTab) override {
     symTab.enterScope();
     for (auto &proto : prototypes) {
       proto->typeCheck(symTab);
@@ -1820,7 +2062,7 @@ public:
     }
     symTab.exitScope();
   }
-  
+
   std::vector<TAC> convertSymbolsToTAC(const SymbolTable &symTab) {
     std::vector<TAC> TACdefs;
 
