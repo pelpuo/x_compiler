@@ -441,73 +441,124 @@ public:
     right->resolveSymbol(symTab);
   }
 
+  // In AST.h, replace the existing BinaryOp::typeCheck method
   Expr *typeCheck(SymbolTable &symTab) override {
     std::cout << "Typechecking BinaryOp: " << TokenStr[(int)op] << std::endl;
 
-    // Type check both children and reassign back into unique_ptrs
+    // Type check children first, updating pointers as we go.
     Expr *lhsResult = left->typeCheck(symTab);
-    if (lhsResult != left.get())
-      left.reset(lhsResult);
-
-    Expr *rhsResult = right->typeCheck(symTab);
-    if (rhsResult != right.get())
-      right.reset(rhsResult);
-
-    // cout << "Left type: " << left->getExprType()->toString()
-    //      << ", Right type: " << right->getExprType()->toString() <<
-    //      std::endl;
-
-    Expr *lhs = left.get();
-    Expr *rhs = right.get();
-
-    // Ensure types are available
-    const Type *lt = lhs->getExprType();
-    const Type *rt = rhs->getExprType();
-
-    if (!lt || !rt) {
-      std::cerr << "ERROR: Missing type in BinaryOp operands: ";
-      if (!lt)
-        std::cerr << "LHS type is null. ";
-      if (!rt)
-        std::cerr << "RHS type is null.";
-      std::cerr << std::endl;
-      exit(1);
+    if (lhsResult != left.get()) {
+        left.reset(lhsResult);
     }
 
-    // Logical ops always yield int
+    Expr *rhsResult = right->typeCheck(symTab);
+    if (rhsResult != right.get()) {
+        right.reset(rhsResult);
+    }
+
+    const Type *lt = left->getExprType();
+    const Type *rt = right->getExprType();
+
+    if (!lt || !rt) {
+        std::cerr << "ERROR: Missing type in BinaryOp operands." << std::endl;
+        exit(1);
+    }
+
     if (op == TokenType::LOGICAL_AND || op == TokenType::LOGICAL_OR) {
-      this->setExprType(std::make_unique<IntType>());
-      return this;
+        this->setExprType(std::make_unique<IntType>());
+        return this;
     }
 
     const Type *common = TypeChecker::get_common_type(lt, rt);
-    lhs = TypeChecker::convert_to(lhs, common);
-    rhs = TypeChecker::convert_to(rhs, common);
 
-    Expr *lhsCast = TypeChecker::convert_to(lhs, common);
-    if (lhsCast != lhs)
-      left.reset(lhsCast);
+    // This is the fix: Release ownership, convert, and reset the unique_ptr.
+    left.reset(TypeChecker::convert_to(left.release(), common));
+    right.reset(TypeChecker::convert_to(right.release(), common));
 
-    Expr *rhsCast = TypeChecker::convert_to(rhs, common);
-    if (rhsCast != rhs)
-      right.reset(rhsCast);
-
-    // Set result type based on operation
+    // Set the result type for the operation itself.
     switch (op) {
-    case TokenType::PLUS:
-    case TokenType::MINUS:
-    case TokenType::MUL:
-    case TokenType::DIV:
-    case TokenType::MOD:
-      this->setExprType(common->clone());
-      break;
-    default:
-      this->setExprType(std::make_unique<IntType>());
-      break;
+        case TokenType::PLUS:
+        case TokenType::MINUS:
+        case TokenType::MUL:
+        case TokenType::DIV:
+        case TokenType::MOD:
+            this->setExprType(common->clone());
+            break;
+        default: // Relational and equality operators result in int.
+            this->setExprType(std::make_unique<IntType>());
+            break;
     }
 
     return this;
-  }
+}
+
+  // Expr *typeCheck(SymbolTable &symTab) override {
+  //   std::cout << "Typechecking BinaryOp: " << TokenStr[(int)op] << std::endl;
+
+  //   // Type check both children and reassign back into unique_ptrs
+  //   Expr *lhsResult = left->typeCheck(symTab);
+  //   if (lhsResult != left.get())
+  //     left.reset(lhsResult);
+
+  //   Expr *rhsResult = right->typeCheck(symTab);
+  //   if (rhsResult != right.get())
+  //     right.reset(rhsResult);
+
+  //   // cout << "Left type: " << left->getExprType()->toString()
+  //   //      << ", Right type: " << right->getExprType()->toString() <<
+  //   //      std::endl;
+
+  //   Expr *lhs = left.get();
+  //   Expr *rhs = right.get();
+
+  //   // Ensure types are available
+  //   const Type *lt = lhs->getExprType();
+  //   const Type *rt = rhs->getExprType();
+
+  //   if (!lt || !rt) {
+  //     std::cerr << "ERROR: Missing type in BinaryOp operands: ";
+  //     if (!lt)
+  //       std::cerr << "LHS type is null. ";
+  //     if (!rt)
+  //       std::cerr << "RHS type is null.";
+  //     std::cerr << std::endl;
+  //     exit(1);
+  //   }
+
+  //   // Logical ops always yield int
+  //   if (op == TokenType::LOGICAL_AND || op == TokenType::LOGICAL_OR) {
+  //     this->setExprType(std::make_unique<IntType>());
+  //     return this;
+  //   }
+
+  //   const Type *common = TypeChecker::get_common_type(lt, rt);
+  //   lhs = TypeChecker::convert_to(lhs, common);
+  //   rhs = TypeChecker::convert_to(rhs, common);
+
+  //   Expr *lhsCast = TypeChecker::convert_to(lhs, common);
+  //   if (lhsCast != lhs)
+  //     left.reset(lhsCast);
+
+  //   Expr *rhsCast = TypeChecker::convert_to(rhs, common);
+  //   if (rhsCast != rhs)
+  //     right.reset(rhsCast);
+
+  //   // Set result type based on operation
+  //   switch (op) {
+  //   case TokenType::PLUS:
+  //   case TokenType::MINUS:
+  //   case TokenType::MUL:
+  //   case TokenType::DIV:
+  //   case TokenType::MOD:
+  //     this->setExprType(common->clone());
+  //     break;
+  //   default:
+  //     this->setExprType(std::make_unique<IntType>());
+  //     break;
+  //   }
+
+  //   return this;
+  // }
 };
 //////////////////////////////////////////////////////////////////////////
 
@@ -654,6 +705,7 @@ public:
     auto valueCode = value->generateTAC(valueTemp);
     code.insert(code.end(), valueCode.begin(), valueCode.end());
 
+    // code.push_back(TAC("store", valueTemp, "int", nameTemp));
     code.push_back(TAC("store", valueTemp, expType->toString(), nameTemp));
 
     tempVar = valueTemp;
@@ -666,50 +718,75 @@ public:
     value->resolveSymbol(symTab);
   }
 
+  // In AST.h, replace the existing Assignment::typeCheck method
   Expr *typeCheck(SymbolTable &symTab) override {
     std::cout << "Typechecking Assignment: " << std::endl;
-    // Typecheck both sides
-    Expr *lhsChecked = name->typeCheck(symTab);
-    Expr *rhsChecked = value->typeCheck(symTab);
 
-    if (!lhsChecked || !rhsChecked) {
-      std::cerr << "ERROR: Assignment operands returned null expressions\n";
-      exit(1);
+    Expr *lhsChecked = name->typeCheck(symTab);
+    if (lhsChecked != name.get()) {
+        name.reset(lhsChecked);
     }
 
-    const Type *lt = lhsChecked->getExprType();
-    const Type *rt = rhsChecked->getExprType();
+    Expr *rhsChecked = value->typeCheck(symTab);
+    if (rhsChecked != value.get()) {
+        value.reset(rhsChecked);
+    }
+
+    const Type *lt = name->getExprType();
+    const Type *rt = value->getExprType();
 
     if (!lt || !rt) {
-      std::cerr << "ERROR: Assignment operands missing type info\n";
-      if (!lt)
-        std::cerr << "LHS type is null. ";
-      if (!rt)
-        std::cerr << "RHS type is null. ";
-      std::cerr << std::endl;
-      exit(1);
+        std::cerr << "ERROR: Assignment operands missing type info." << std::endl;
+        exit(1);
+    }
+    if (!dynamic_cast<Variable *>(name.get())) {
+        std::cerr << "ERROR: LHS of assignment must be a variable." << std::endl;
+        exit(1);
     }
 
-    // Ensure LHS is an assignable l-value (e.g., variable)
-    if (!dynamic_cast<Variable *>(lhsChecked)) {
-      std::cerr
-          << "ERROR: LHS of assignment must be a variable (not an r-value)\n";
-      exit(1);
-    }
+    // Simplify the conversion to a direct release-and-reset.
+    value.reset(TypeChecker::convert_to(value.release(), lt));
 
-    // Convert RHS to match LHS type
-    Expr *convertedRHS = TypeChecker::convert_to(rhsChecked, lt);
-
-    // Store updated expressions
-    if (lhsChecked != name.get())
-      name.reset(lhsChecked);
-    if (convertedRHS != value.get())
-      value.reset(convertedRHS);
-
-    // Set type of the assignment expression
     this->setExprType(lt->clone());
     return this;
   }
+  // Expr *typeCheck(SymbolTable &symTab) override {
+  //   std::cout << "Typechecking Assignment: " << std::endl;
+
+  //   // Typecheck both sides.
+  //   Expr *lhsChecked = name->typeCheck(symTab);
+  //   if (lhsChecked != name.get()) {
+  //       name.reset(lhsChecked);
+  //   }
+
+  //   Expr *rhsChecked = value->typeCheck(symTab);
+  //   if (rhsChecked != value.get()) {
+  //       value.reset(rhsChecked);
+  //   }
+
+  //   const Type *lt = name->getExprType();
+  //   const Type *rt = value->getExprType();
+
+  //   if (!lt || !rt) {
+  //       std::cerr << "ERROR: Assignment operands missing type info." << std::endl;
+  //       exit(1);
+  //   }
+
+  //   // Ensure LHS is an assignable l-value.
+  //   if (!dynamic_cast<Variable *>(name.get())) {
+  //       std::cerr << "ERROR: LHS of assignment must be a variable." << std::endl;
+  //       exit(1);
+  //   }
+
+  //   // Correctly transfer ownership for the conversion.
+  //   Expr *convertedRHS = TypeChecker::convert_to(value.release(), lt);
+  //   if (value.get() != convertedRHS)
+  //   value.reset(convertedRHS);
+
+  //   // Set type of the assignment expression.
+  //   this->setExprType(lt->clone());
+  //   return this;
+  // }
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -792,48 +869,83 @@ public:
     right->resolveSymbol(symTab);
   }
 
+  // In AST.h, replace the existing CompoundAssignment::typeCheck method
   Expr *typeCheck(SymbolTable &symTab) override {
-    std::cout << "Typechecking CompoundAssignment: " << TokenStr[(int)op]
-              << std::endl;
+    std::cout << "Typechecking CompoundAssignment: " << TokenStr[(int)op] << std::endl;
 
     // Typecheck both sides
     Expr *lhsResult = left->typeCheck(symTab);
-    if (lhsResult != left.get())
-      left.reset(lhsResult);
+    if (lhsResult != left.get()) {
+        left.reset(lhsResult);
+    }
 
     Expr *rhsResult = right->typeCheck(symTab);
-    if (rhsResult != right.get())
-      right.reset(rhsResult);
+    if (rhsResult != right.get()) {
+        right.reset(rhsResult);
+    }
 
     const Type *lt = left->getExprType();
     const Type *rt = right->getExprType();
 
     if (!lt || !rt) {
-      std::cerr
-          << "ERROR: Missing type info in compound assignment operands.\n";
-      if (!lt)
-        std::cerr << "LHS is null. ";
-      if (!rt)
-        std::cerr << "RHS is null. ";
-      std::cerr << std::endl;
-      exit(1);
+        std::cerr << "ERROR: Missing type info in compound assignment operands.\n";
+        exit(1);
     }
-
-    // Ensure LHS is a variable
     if (!dynamic_cast<Variable *>(left.get())) {
-      std::cerr << "ERROR: LHS of compound assignment must be a variable\n";
-      exit(1);
+        std::cerr << "ERROR: LHS of compound assignment must be a variable\n";
+        exit(1);
     }
 
-    // Convert RHS to LHS type
-    Expr *converted = TypeChecker::convert_to(right.get(), lt);
-    if (converted != right.get())
-      right.reset(converted);
+    // This is the fix: Release ownership, convert, and reset the unique_ptr.
+    right.reset(TypeChecker::convert_to(right.release(), lt));
 
-    // Result type of compound assignment is the LHS type
+    // Result type of compound assignment is the LHS type.
     this->setExprType(lt->clone());
     return this;
   }
+
+  // Expr *typeCheck(SymbolTable &symTab) override {
+  //   std::cout << "Typechecking CompoundAssignment: " << TokenStr[(int)op]
+  //             << std::endl;
+
+  //   // Typecheck both sides
+  //   Expr *lhsResult = left->typeCheck(symTab);
+  //   if (lhsResult != left.get())
+  //     left.reset(lhsResult);
+
+  //   Expr *rhsResult = right->typeCheck(symTab);
+  //   if (rhsResult != right.get())
+  //     right.reset(rhsResult);
+
+  //   const Type *lt = left->getExprType();
+  //   const Type *rt = right->getExprType();
+
+  //   if (!lt || !rt) {
+  //     std::cerr
+  //         << "ERROR: Missing type info in compound assignment operands.\n";
+  //     if (!lt)
+  //       std::cerr << "LHS is null. ";
+  //     if (!rt)
+  //       std::cerr << "RHS is null. ";
+  //     std::cerr << std::endl;
+  //     exit(1);
+  //   }
+
+  //   // Ensure LHS is a variable
+  //   if (!dynamic_cast<Variable *>(left.get())) {
+  //     std::cerr << "ERROR: LHS of compound assignment must be a variable\n";
+  //     exit(1);
+  //   }
+
+  //   // Convert RHS to LHS type
+  //   Expr *converted = TypeChecker::convert_to(right.get(), lt);
+  //   if (converted != right.get())
+  //     right.reset(converted);
+
+  //   // Result type of compound assignment is the LHS type
+  //   this->setExprType(lt->clone());
+  //   return this;
+  // }
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -1130,12 +1242,22 @@ public:
     symTab.exitScope();
   }
 
+  // Expr *typeCheck(SymbolTable &symTab) override {
+  //   symTab.enterScope();
+  //   for (auto &item : items) {
+  //     item->typeCheck(symTab);
+  //   }
+  //   symTab.exitScope();
+  // }
+
+  // In AST.h, replace the existing Block::typeCheck method
   Expr *typeCheck(SymbolTable &symTab) override {
     symTab.enterScope();
     for (auto &item : items) {
-      item->typeCheck(symTab);
+        item->typeCheck(symTab); // Call typeCheck, discard the (now always) null pointer
     }
     symTab.exitScope();
+    return nullptr; // Block itself doesn't return a value
   }
 };
 
@@ -1178,8 +1300,18 @@ public:
     expr->resolveSymbol(symTab);
   }
 
+  // Expr *typeCheck(SymbolTable &symTab) override {
+  //   return expr->typeCheck(symTab);
+  // }
+  // In AST.h, replace the existing ExprStmt::typeCheck method
   Expr *typeCheck(SymbolTable &symTab) override {
-    return expr->typeCheck(symTab);
+    if (expr) {
+        Expr* newExpr = expr->typeCheck(symTab);
+        if (newExpr != expr.get()) {
+            expr.reset(newExpr);
+        }
+    }
+    return nullptr; // Statements should not return expressions
   }
 };
 
@@ -1214,9 +1346,22 @@ public:
     expr->resolveSymbol(symTab);
   }
 
+  // Expr *typeCheck(SymbolTable &symTab) override {
+  //   cout << "Typechecking ReturnStmt" << endl;
+  //   return expr ? expr->typeCheck(symTab) : nullptr;
+  // }
+
+  // In AST.h, replace the existing ReturnStmt::typeCheck method
   Expr *typeCheck(SymbolTable &symTab) override {
     cout << "Typechecking ReturnStmt" << endl;
-    return expr ? expr->typeCheck(symTab) : nullptr;
+    if (expr) {
+        // Capture the result and update the pointer if it changed.
+        Expr* newExpr = expr->typeCheck(symTab);
+        if (newExpr != expr.get()) {
+            expr.reset(newExpr);
+        }
+    }
+    return nullptr; // A statement does not return an expression.
   }
 };
 
@@ -1315,8 +1460,12 @@ public:
 
   Expr *typeCheck(SymbolTable &symTab) override {
     cout << "Typechecking IfStmt" << endl;
-    if (condition)
-      condition->typeCheck(symTab);
+    if (condition) {
+        Expr* condResult = condition->typeCheck(symTab);
+        if (condResult != condition.get()) {
+            condition.reset(condResult);
+        }
+    }
     symTab.enterScope();
     if (thenBlock)
       thenBlock->typeCheck(symTab);
@@ -1393,8 +1542,13 @@ public:
 
   Expr *typeCheck(SymbolTable &symTab) override {
     cout << "Typechecking WhileStmt" << endl;
+    if (condition) {
+      Expr* condResult = condition->typeCheck(symTab);
+      if (condResult != condition.get()) {
+          condition.reset(condResult);
+      }
+    }
     symTab.enterScope();
-    condition->typeCheck(symTab);
     body->typeCheck(symTab);
     symTab.exitScope();
 
@@ -1484,14 +1638,23 @@ public:
   Expr *typeCheck(SymbolTable &symTab) override {
     cout << "Typechecking ForStmt" << endl;
     symTab.enterScope();
-    init->typeCheck(symTab);
-    cond->typeCheck(symTab);
-    inc->typeCheck(symTab);
-    body->typeCheck(symTab);
+    if (init) init->typeCheck(symTab);
+    if (cond) {
+        Expr* condResult = cond->typeCheck(symTab);
+        if (condResult != cond.get()) {
+            cond.reset(condResult);
+        }
+    }
+    if (inc) {
+        Expr* incResult = inc->typeCheck(symTab);
+        if (incResult != inc.get()) {
+            inc.reset(incResult);
+        }
+    }
+    if (body) body->typeCheck(symTab);
     symTab.exitScope();
-
     return nullptr;
-  }
+}
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -1557,7 +1720,12 @@ public:
   Expr *typeCheck(SymbolTable &symTab) override {
     cout << "Typechecking DoWhileStmt" << endl;
     symTab.enterScope();
-    cond->typeCheck(symTab);
+    if (cond) {
+        Expr* condResult = cond->typeCheck(symTab);
+        if (condResult != cond.get()) {
+            cond.reset(condResult);
+        }
+    }
     body->typeCheck(symTab);
     symTab.exitScope();
 
@@ -1897,6 +2065,7 @@ public:
         initializer = std::move(casted);
       }
     }
+    return nullptr;
   }
 };
 
@@ -2010,6 +2179,8 @@ public:
       body->typeCheck(symTab);
       symTab.exitScope();
     }
+
+    return nullptr;
   }
 };
 

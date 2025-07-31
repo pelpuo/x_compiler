@@ -9,6 +9,9 @@ int main() {
     // long int c = b + a; 
 
     int result = 1;
+    int j = 5;
+    int k;
+    k = result * j;
     for (int i = 1; i <= 10; i++) {
         result = result * i;
     }
