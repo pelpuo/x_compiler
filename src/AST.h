@@ -328,11 +328,12 @@ public:
 // Binary operation (e.g., `a + b`)
 class BinaryOp : public Expr {
 public:
-  char op; // Operator like '+', '-', '*', '/'
+  // char op; // Operator like '+', '-', '*', '/'
+  TokenType op;
   std::unique_ptr<Expr> left, right;
   std::unique_ptr<Type> expType = nullptr; // <--- NEW
 
-  BinaryOp(char op, std::unique_ptr<Expr> left, std::unique_ptr<Expr> right,
+  BinaryOp(TokenType op, std::unique_ptr<Expr> left, std::unique_ptr<Expr> right,
            std::unique_ptr<Type> expType = nullptr)
       : op(op), left(std::move(left)), right(std::move(right)),
         expType(std::move(expType)) {}
@@ -340,7 +341,7 @@ public:
   void print() {
     cout << "BinaryOp: ";
     left->print();
-    cout << " " << op << " ";
+    cout << " " << TokenStr[(int)op] << " ";
     right->print();
     cout << endl;
   }

@@ -36,7 +36,7 @@ int main(int argc, char ** argv){
 
     Parser parser(lexer);
     ASTProgram *prog = parser.parse();
-    // prog->print();
+    prog->print();
     SymbolTable symTab;
     // TypeChecker typeChecker;
     prog->resolveSymbol(symTab);
