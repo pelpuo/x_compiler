@@ -181,7 +181,11 @@ static string TokenStr[] = {
 
     "SWITCH",
     "CASE",
-    "DEFAULT"
+    "DEFAULT",
+
+    "EXTERN",
+    "STATIC",
+    "CONST"
 };
 
 typedef struct{
