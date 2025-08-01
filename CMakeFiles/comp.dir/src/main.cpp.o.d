@@ -1,5 +1,5 @@
 CMakeFiles/comp.dir/src/main.cpp.o: \
- /home/local/ASUAD/ekayang/Documents/Github/x_compiler/src/main.cpp \
+ /home/panda/Documents/Github/micomp/src/main.cpp \
  /usr/include/stdc-predef.h /usr/include/c++/11/iostream \
  /usr/include/x86_64-linux-gnu/c++/11/bits/c++config.h \
  /usr/include/x86_64-linux-gnu/c++/11/bits/os_defines.h \
@@ -151,7 +151,7 @@ CMakeFiles/comp.dir/src/main.cpp.o: \
  /usr/include/x86_64-linux-gnu/c++/11/bits/c++io.h \
  /usr/include/c++/11/bits/fstream.tcc /usr/include/c++/11/sstream \
  /usr/include/c++/11/bits/sstream.tcc \
- /home/local/ASUAD/ekayang/Documents/Github/x_compiler/src/lexer.h \
+ /home/panda/Documents/Github/micomp/src/lexer.h \
  /usr/include/c++/11/optional /usr/include/c++/11/utility \
  /usr/include/c++/11/bits/stl_relops.h \
  /usr/include/c++/11/bits/enable_special_members.h \
@@ -159,9 +159,9 @@ CMakeFiles/comp.dir/src/main.cpp.o: \
  /usr/include/c++/11/bits/stl_vector.h \
  /usr/include/c++/11/bits/stl_bvector.h \
  /usr/include/c++/11/bits/vector.tcc \
- /home/local/ASUAD/ekayang/Documents/Github/x_compiler/src/parser.h \
- /home/local/ASUAD/ekayang/Documents/Github/x_compiler/src/AST.h \
- /home/local/ASUAD/ekayang/Documents/Github/x_compiler/src/SymbolTable.h \
+ /home/panda/Documents/Github/micomp/src/parser.h \
+ /home/panda/Documents/Github/micomp/src/AST.h \
+ /home/panda/Documents/Github/micomp/src/SymbolTable.h \
  /usr/include/c++/11/unordered_map \
  /usr/include/c++/11/ext/aligned_buffer.h \
  /usr/include/c++/11/bits/hashtable.h \
@@ -170,7 +170,7 @@ CMakeFiles/comp.dir/src/main.cpp.o: \
  /usr/include/c++/11/bits/invoke.h /usr/include/c++/11/bits/node_handle.h \
  /usr/include/c++/11/bits/unordered_map.h \
  /usr/include/c++/11/bits/erase_if.h \
- /home/local/ASUAD/ekayang/Documents/Github/x_compiler/src/Type.h \
+ /home/panda/Documents/Github/micomp/src/Type.h \
  /usr/include/c++/11/memory /usr/include/c++/11/bits/stl_tempbuf.h \
  /usr/include/c++/11/bits/stl_raw_storage_iter.h \
  /usr/include/c++/11/bits/align.h /usr/include/c++/11/bit \
@@ -185,9 +185,9 @@ CMakeFiles/comp.dir/src/main.cpp.o: \
  /usr/include/c++/11/backward/auto_ptr.h \
  /usr/include/c++/11/pstl/glue_memory_defs.h \
  /usr/include/c++/11/pstl/execution_defs.h \
- /home/local/ASUAD/ekayang/Documents/Github/x_compiler/src/TAC.h \
- /home/local/ASUAD/ekayang/Documents/Github/x_compiler/src/TypeChecker.h \
- /home/local/ASUAD/ekayang/Documents/Github/x_compiler/src/TAC_to_ASM.h \
+ /home/panda/Documents/Github/micomp/src/TAC.h \
+ /home/panda/Documents/Github/micomp/src/TypeChecker.h \
+ /home/panda/Documents/Github/micomp/src/TAC_to_ASM.h \
  /usr/include/c++/11/map /usr/include/c++/11/bits/stl_tree.h \
  /usr/include/c++/11/bits/stl_map.h \
  /usr/include/c++/11/bits/stl_multimap.h

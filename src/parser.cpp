@@ -217,8 +217,8 @@ ASTProgram *Parser::parseProgram() {
 //   consume(TokenType::LEFT_BRACE);
 //   BlockItem *nextItem;
 //   while (token.type != TokenType::RIGHT_BRACE) {
-//     nextItem = parseBlockItem(); // Parse block items (statements, expressions)
-//     if (nextItem == nullptr)
+//     nextItem = parseBlockItem(); // Parse block items (statements,
+//     expressions) if (nextItem == nullptr)
 //       break; // If no more block items are found, break
 //     stmts->addItem(std::unique_ptr<BlockItem>(nextItem));
 //   }
@@ -263,8 +263,8 @@ Declaration *Parser::parseDeclaration() {
   return var;
 }
 
-
-VarDecl *Parser::parseVarDecl(const std::string &varName, std::unique_ptr<Type> type) {
+VarDecl *Parser::parseVarDecl(const std::string &varName,
+                              std::unique_ptr<Type> type) {
   std::unique_ptr<Expr> initializer = nullptr;
 
   // Check for optional initialization (e.g., int x = 10;)
@@ -277,7 +277,8 @@ VarDecl *Parser::parseVarDecl(const std::string &varName, std::unique_ptr<Type> 
   return new VarDecl(varName, std::move(initializer), std::move(type));
 }
 
-FuncDecl *Parser::parseFuncDeclOrProto(const std::string &funcName, std::unique_ptr<Type> returnType) {
+FuncDecl *Parser::parseFuncDeclOrProto(const std::string &funcName,
+                                       std::unique_ptr<Type> returnType) {
   consume(TokenType::LEFT_PAREN);
 
   std::vector<std::string> paramNames;
@@ -288,7 +289,7 @@ FuncDecl *Parser::parseFuncDeclOrProto(const std::string &funcName, std::unique_
       auto [paramType, _, __] = parseTypeAndStorageClass();
       expect(TokenType::ID);
       std::string paramName = token.value.value();
-      advance();  // consume the ID
+      advance(); // consume the ID
       paramNames.push_back(paramName);
       paramTypes.push_back(std::move(paramType));
     } while (token.type == TokenType::COMMA && (advance(), true));
@@ -296,12 +297,14 @@ FuncDecl *Parser::parseFuncDeclOrProto(const std::string &funcName, std::unique_
 
   consume(TokenType::RIGHT_PAREN);
 
-  std::unique_ptr<Type> funcType = std::make_unique<FunctionType>(std::move(paramTypes), std::move(returnType));
+  std::unique_ptr<Type> funcType = std::make_unique<FunctionType>(
+      std::move(paramTypes), std::move(returnType));
 
   // Prototype
   if (token.type == TokenType::SEMICOLON) {
     consume(TokenType::SEMICOLON);
-    return new FuncDecl(funcName, std::move(paramNames), nullptr, std::move(funcType));
+    return new FuncDecl(funcName, std::move(paramNames), nullptr,
+                        std::move(funcType));
   }
 
   // Function definition
@@ -311,15 +314,16 @@ FuncDecl *Parser::parseFuncDeclOrProto(const std::string &funcName, std::unique_
 
   while (token.type != TokenType::RIGHT_BRACE) {
     nextItem = parseBlockItem();
-    if (!nextItem) break;
+    if (!nextItem)
+      break;
     body->addItem(std::unique_ptr<BlockItem>(nextItem));
   }
 
   consume(TokenType::RIGHT_BRACE);
 
-  return new FuncDecl(funcName, std::move(paramNames), std::move(body), std::move(funcType));
+  return new FuncDecl(funcName, std::move(paramNames), std::move(body),
+                      std::move(funcType));
 }
-
 
 // FuncDecl *Parser::parseFuncDecl(const std::string &funcName,
 //                                 TypeSpecifier type) {
@@ -578,8 +582,8 @@ Expr *Parser::parseFactor() {
   //     exit(1);
   //   }
   // }
-  if(token.type == TokenType::NUM || token.type == TokenType::LONG_CONST) {
-    base = parseConstant(); 
+  if (token.type == TokenType::NUM || token.type == TokenType::LONG_CONST) {
+    base = parseConstant();
   } else if (token.type == TokenType::LEFT_PAREN) {
     consume(TokenType::LEFT_PAREN);
     base = parseExpr();
@@ -631,8 +635,10 @@ Expr *Parser::parseFactor() {
 
 //   if ((types.size() == 1 && types[0] == TypeSpecifier::LONG) ||
 //       (types.size() == 2 &&
-//        ((types[0] == TypeSpecifier::INT && types[1] == TypeSpecifier::LONG) ||
-//         (types[0] == TypeSpecifier::LONG && types[1] == TypeSpecifier::INT)))) {
+//        ((types[0] == TypeSpecifier::INT && types[1] == TypeSpecifier::LONG)
+//        ||
+//         (types[0] == TypeSpecifier::LONG && types[1] ==
+//         TypeSpecifier::INT)))) {
 //     return TypeSpecifier::LONG;
 //   }
 
@@ -712,11 +718,11 @@ Parser::parseTypeAndStorageClass() {
     exit(1);
   }
 
-  TypeQualifier qualifier = seenConst ? TypeQualifier::CONST : TypeQualifier::NONE;
+  TypeQualifier qualifier =
+      seenConst ? TypeQualifier::CONST : TypeQualifier::NONE;
 
   return {std::move(baseType), storage, qualifier};
 }
-
 
 Expr *Parser::parseConstant() {
   if (token.type == TokenType::NUM) {

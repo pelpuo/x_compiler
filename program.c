@@ -1,3 +1,12 @@
+int fac(int n){
+    int res = 1;
+    for (int i = 1; i <= n; i++) {
+        res *= i;
+    }
+    return res;
+}
+
+
 int main() {
     // static int counter = 7;
     // static long counter2 = 7L;
@@ -8,13 +17,8 @@ int main() {
     
     // long int c = b + a; 
 
-    int result = 1;
-    int j = 5;
-    int k;
-    k = result * j;
-    for (int i = 1; i <= 10; i++) {
-        result = result * i;
-    }
+    int result;
+    result = fac(5);
     
     return result;
  }
