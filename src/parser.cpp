@@ -150,6 +150,7 @@ bool Parser::isTypeSpecifier(TokenType type) {
   case TokenType::LONG:
   case TokenType::UNSIGNED:
   case TokenType::VOID:
+  case TokenType::DOUBLE:
   case TokenType::SIGNED:
     return true;
   default:
@@ -186,55 +187,12 @@ ASTProgram *Parser::parseProgram() {
   return program;
 }
 
-// FuncDecl *Parser::parseFunction() {
-//   std::unique_ptr<Block> stmts = std::make_unique<Block>();
-
-//   // Parse the return type of the function (assumed 'int')
-//   consume(TokenType::INT);
-
-//   // Parse the function name
-//   expect(TokenType::ID);
-//   std::string name = token.value.value();
-//   consume(TokenType::ID);
-
-//   // Parse the parameters inside parentheses
-//   consume(TokenType::LEFT_PAREN);
-//   std::vector<std::string> params;
-
-//   // Parse each parameter if available
-//   if (token.type != TokenType::RIGHT_PAREN) {
-//     do {
-//       consume(TokenType::INT); // Assume each param is of type 'int'
-//       expect(TokenType::ID);
-//       std::string paramName = token.value.value();
-//       consume(TokenType::ID);
-//       params.push_back(paramName);
-//     } while (token.type == TokenType::COMMA && (advance(), true));
-//   }
-
-//   consume(TokenType::RIGHT_PAREN);
-
-//   // Parse the function body enclosed in braces
-//   consume(TokenType::LEFT_BRACE);
-//   BlockItem *nextItem;
-//   while (token.type != TokenType::RIGHT_BRACE) {
-//     nextItem = parseBlockItem(); // Parse block items (statements,
-//     expressions) if (nextItem == nullptr)
-//       break; // If no more block items are found, break
-//     stmts->addItem(std::unique_ptr<BlockItem>(nextItem));
-//   }
-//   consume(TokenType::RIGHT_BRACE); // Consume the closing brace
-
-//   // Return a new function declaration object
-//   return new FuncDecl(name, std::move(params), std::move(stmts));
-// }
-
 BlockItem *Parser::parseBlockItem() {
   // Check if the next token is a type specifier (indicating a declaration)
   if (token.type == TokenType::INT || token.type == TokenType::STATIC ||
       token.type == TokenType::EXTERN || token.type == TokenType::CONST ||
       token.type == TokenType::SIGNED || token.type == TokenType::UNSIGNED ||
-      token.type == TokenType::LONG) {
+      token.type == TokenType::LONG || token.type == TokenType::DOUBLE) {
     return parseDeclaration();
   } else {
     return parseStatement();
@@ -412,7 +370,7 @@ Stmt *Parser::parseStatement() {
     if (token.type == TokenType::INT || token.type == TokenType::STATIC ||
         token.type == TokenType::EXTERN || token.type == TokenType::CONST ||
         token.type == TokenType::SIGNED || token.type == TokenType::UNSIGNED ||
-        token.type == TokenType::LONG) {
+        token.type == TokenType::LONG || token.type == TokenType::DOUBLE) {
       // consume(TokenType::INT); // Consume 'int' keyword
       auto [type, storage, TypeQualifier] = parseTypeAndStorageClass();
 
@@ -570,8 +528,10 @@ Expr *Parser::parseTerm() { return nullptr; }
 Expr *Parser::parseFactor() {
   Expr *base;
 
-  if (token.type == TokenType::NUM || token.type == TokenType::LONG_CONST || 
-      token.type == TokenType::UNSIGNED_LONG_CONST || token.type == TokenType::UNSIGNED_INT_CONST) {
+  if (token.type == TokenType::NUM || token.type == TokenType::LONG_CONST ||
+      token.type == TokenType::FLOAT_CONST ||
+      token.type == TokenType::UNSIGNED_LONG_CONST ||
+      token.type == TokenType::UNSIGNED_INT_CONST) {
     base = parseConstant();
   } else if (token.type == TokenType::LEFT_PAREN) {
     consume(TokenType::LEFT_PAREN);
@@ -639,18 +599,19 @@ std::tuple<std::unique_ptr<Type>, StorageClass, TypeQualifier>
 Parser::parseTypeAndStorageClass() {
   std::vector<TokenType> specifiers;
 
-  // Collect all valid type/storage/qualifier specifiers
+  // Collect valid specifiers
   while (token.type == TokenType::STATIC || token.type == TokenType::EXTERN ||
          token.type == TokenType::CONST || token.type == TokenType::INT ||
          token.type == TokenType::SIGNED || token.type == TokenType::UNSIGNED ||
-         token.type == TokenType::LONG) {
+         token.type == TokenType::LONG || token.type == TokenType::DOUBLE) {
     specifiers.push_back(token.type);
     advance();
   }
 
-  // Flags for specifiers
+  // Flags
   bool seenConst = false;
   bool seenInt = false;
+  bool seenDouble = false;
   bool seenLong = false;
   bool seenSigned = false;
   bool seenUnsigned = false;
@@ -707,12 +668,29 @@ Parser::parseTypeAndStorageClass() {
       }
       storage = StorageClass::EXTERN;
       break;
+    case TokenType::DOUBLE:
+      if (seenDouble) {
+        std::cerr << "ERROR: Duplicate 'double' specifier\n";
+        exit(1);
+      }
+      seenDouble = true;
+      break;
     default:
       error();
     }
   }
 
-  // Determine base type
+  // Handle 'double'
+  if (seenDouble) {
+    if (seenInt || seenLong || seenUnsigned || seenSigned) {
+      std::cerr << "ERROR: Invalid combination with 'double'\n";
+      exit(1);
+    }
+    return {std::make_unique<DoubleType>(), storage,
+            seenConst ? TypeQualifier::CONST : TypeQualifier::NONE};
+  }
+
+  // Determine base type for int/long/signed/unsigned
   std::unique_ptr<Type> baseType;
 
   if (seenUnsigned) {
@@ -722,19 +700,18 @@ Parser::parseTypeAndStorageClass() {
       baseType = std::make_unique<UnsignedIntType>();
   } else if (seenSigned) {
     if (seenLong)
-      baseType = std::make_unique<LongType>(); // signed long == long
+      baseType = std::make_unique<LongType>();
     else
-      baseType = std::make_unique<IntType>(); // signed int == int
+      baseType = std::make_unique<IntType>();
   } else {
     if (seenLong)
       baseType = std::make_unique<LongType>();
     else
-      baseType = std::make_unique<IntType>(); // default is signed int
+      baseType = std::make_unique<IntType>();
   }
 
-  TypeQualifier qualifier =
-      seenConst ? TypeQualifier::CONST : TypeQualifier::NONE;
-  return {std::move(baseType), storage, qualifier};
+  return {std::move(baseType), storage,
+          seenConst ? TypeQualifier::CONST : TypeQualifier::NONE};
 }
 
 Expr *Parser::parseConstant() {
@@ -769,11 +746,6 @@ Expr *Parser::parseConstant() {
       exit(1);
     }
 
-    if (v > UINT64_MAX) {
-      std::cerr << "ERROR: Value too large for unsigned long\n";
-      exit(1);
-    }
-
     consume(TokenType::UNSIGNED_LONG_CONST);
     return new ConstUnsignedLong(static_cast<unsigned long>(v));
   }
@@ -790,6 +762,20 @@ Expr *Parser::parseConstant() {
 
     consume(TokenType::LONG_CONST);
     return new ConstLong(static_cast<long>(v));
+  }
+
+  // Handle floating-point (double) constant
+  if (token.type == TokenType::FLOAT_CONST) {
+    double v;
+    try {
+      v = std::stod(tokentext);
+    } catch (const std::exception &) {
+      std::cerr << "ERROR: Invalid floating-point constant value\n";
+      exit(1);
+    }
+
+    consume(TokenType::FLOAT_CONST);
+    return new ConstDouble(v);
   }
 
   // Default: plain NUM (could be int or long)

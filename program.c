@@ -23,9 +23,16 @@
 //     return result;
 //  }
 
-int main() {
-    unsigned int a = 10;
-    int b = 20;
-    unsigned int c = a + b; // Should be 30UL
-    return c; // Return 30UL
+// int main() {
+//     unsigned int a = 10;
+//     int b = 20;
+//     unsigned int c = a + b; // Should be 30UL
+//     return c; // Return 30UL
+// }
+
+int main(){
+    double a = 1.5;
+    double b = 2.5;
+    double c = a + b; // Should be 4.0
+    return c; // Return 4.0
 }

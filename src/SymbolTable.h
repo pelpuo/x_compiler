@@ -14,33 +14,66 @@ enum class SymbolType { VARIABLE, FUNCTION };
 enum class InitKind { NoInitializer, Tentative, Initial };
 
 struct StaticInit {
-  enum class Kind { IntInit, LongInit, UIntInit, ULongInit } kind;
+  enum class Kind { IntInit, LongInit, UIntInit, ULongInit, DoubleInit } kind;
   union {
     int intVal;
     long long longVal;
+    unsigned int uintVal;
+    unsigned long ulongVal;
+    double doubleVal;
   };
 
   StaticInit(int val) : kind(Kind::IntInit), intVal(val) {}
   StaticInit(long long val) : kind(Kind::LongInit), longVal(val) {}
   StaticInit(unsigned int val)
-      : kind(Kind::UIntInit), intVal(static_cast<int>(val)) {}
+      : kind(Kind::UIntInit), uintVal(static_cast<unsigned int>(val)) {}
   StaticInit(unsigned long long val)
-      : kind(Kind::ULongInit), longVal(static_cast<long long>(val)) {}
+      : kind(Kind::ULongInit), ulongVal(static_cast<unsigned long>(val)) {}
+  StaticInit(double val)
+      : kind(Kind::DoubleInit), doubleVal(static_cast<double>(val)) {}
 
   StaticInit(const StaticInit &other) {
     kind = other.kind;
-    if (kind == Kind::IntInit)
+    switch (kind) {
+    case Kind::IntInit:
       intVal = other.intVal;
-    else
+      break;
+    case Kind::LongInit:
       longVal = other.longVal;
+      break;
+    case Kind::UIntInit:
+      uintVal = other.uintVal;
+      break;
+    case Kind::ULongInit:
+      ulongVal = other.ulongVal;
+      break;
+    case Kind::DoubleInit:
+      doubleVal = other.doubleVal;
+      break;
+    }
   }
 
   StaticInit &operator=(const StaticInit &other) {
-    kind = other.kind;
-    if (kind == Kind::IntInit)
-      intVal = other.intVal;
-    else
-      longVal = other.longVal;
+    if (this != &other) {
+      kind = other.kind;
+      switch (kind) {
+      case Kind::IntInit:
+        intVal = other.intVal;
+        break;
+      case Kind::LongInit:
+        longVal = other.longVal;
+        break;
+      case Kind::UIntInit:
+        uintVal = other.uintVal;
+        break;
+      case Kind::ULongInit:
+        ulongVal = other.ulongVal;
+        break;
+      case Kind::DoubleInit:
+        doubleVal = other.doubleVal;
+        break;
+      }
+    }
     return *this;
   }
 };
@@ -107,6 +140,8 @@ class SymbolTable {
     case Type::Kind::UNSIGNED_LONG:
       return StaticInit(
           static_cast<unsigned long long>(static_cast<uint64_t>(rawVal)));
+    case Type::Kind::DOUBLE:
+      return StaticInit(static_cast<double>(rawVal));
     default:
       std::cerr << "ERROR: Unsupported static initializer type\n";
       exit(1);
@@ -177,28 +212,44 @@ public:
       return true;
     }
 
-    // Convert static initializer to proper type if present
     if (newInit.kind == InitKind::Initial && newInit.value.has_value()) {
-      int rawVal;
-      switch (newInit.value->kind) {
-      case StaticInit::Kind::IntInit:
-        rawVal = newInit.value->intVal;
-        break;
-      case StaticInit::Kind::LongInit:
-        rawVal = static_cast<int>(newInit.value->longVal);
-        break;
-      case StaticInit::Kind::UIntInit:
-        rawVal = newInit.value->intVal;
-        break;
-      case StaticInit::Kind::ULongInit:
-        rawVal = static_cast<int>(newInit.value->longVal);
-        break;
-      default:
-        std::cerr << "ERROR: Unknown static initializer kind\n";
-        exit(1);
-      }
+      // Only convert if type mismatch
+      const Type::Kind declaredKind = type->getKind();
+      const StaticInit::Kind initKind = newInit.value->kind;
 
-      newInit.value = convertStaticInit(type.get(), rawVal);
+      bool needsConversion = (declaredKind == Type::Kind::DOUBLE &&
+                              initKind != StaticInit::Kind::DoubleInit) ||
+                             (declaredKind == Type::Kind::INT &&
+                              initKind != StaticInit::Kind::IntInit) ||
+                             (declaredKind == Type::Kind::LONG &&
+                              initKind != StaticInit::Kind::LongInit) ||
+                             (declaredKind == Type::Kind::UNSIGNED_INT &&
+                              initKind != StaticInit::Kind::UIntInit) ||
+                             (declaredKind == Type::Kind::UNSIGNED_LONG &&
+                              initKind != StaticInit::Kind::ULongInit);
+
+      if (needsConversion) {
+        int rawVal = 0;
+        switch (initKind) {
+        case StaticInit::Kind::IntInit:
+          rawVal = newInit.value->intVal;
+          break;
+        case StaticInit::Kind::LongInit:
+          rawVal = static_cast<int>(newInit.value->longVal);
+          break;
+        case StaticInit::Kind::UIntInit:
+          rawVal = static_cast<int>(newInit.value->uintVal);
+          break;
+        case StaticInit::Kind::ULongInit:
+          rawVal = static_cast<int>(newInit.value->ulongVal);
+          break;
+        case StaticInit::Kind::DoubleInit:
+          rawVal = static_cast<int>(newInit.value->doubleVal); // lossy
+          break;
+        }
+
+        newInit.value = convertStaticInit(type.get(), rawVal);
+      }
     }
 
     // New declaration

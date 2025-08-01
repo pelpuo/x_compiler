@@ -30,6 +30,8 @@ void Lexer::next(Token &token) {
       token.type = TokenType::INT;
     } else if (value == "long") {
       token.type = TokenType::LONG;
+    } else if (value == "double") {
+      token.type = TokenType::DOUBLE;
     } else if (value == "signed") {
       token.type = TokenType::SIGNED;
     } else if (value == "unsigned") {
@@ -73,29 +75,45 @@ void Lexer::next(Token &token) {
     return;
   }
 
-  // Tokenizing numbers
-  if (isdigit(*BufferPtr)) {
+  // Tokenizing numbers (int, float, long, unsigned)
+  if (isdigit(*BufferPtr) || (*BufferPtr == '.' && isdigit(*(BufferPtr + 1)))) {
     const char *start = BufferPtr;
-    const char *end = BufferPtr;
+    const char *p = BufferPtr;
 
-    // Scan the digits
-    while (isdigit(*end))
-      ++end;
+    bool isFloat = false;
 
-    // Save the number part (before suffix)
-    std::string value(start, end);
+    // Integer part
+    while (isdigit(*p)) ++p;
 
-    // Default type
-    token.type = TokenType::NUM;
+    // Decimal part
+    if (*p == '.') {
+      isFloat = true;
+      ++p;
+      while (isdigit(*p)) ++p;
+    }
 
-    // Normalize suffix string
+    // Scientific notation
+    if (*p == 'e' || *p == 'E') {
+      isFloat = true;
+      ++p;
+      if (*p == '+' || *p == '-') ++p;
+      if (!isdigit(*p)) {
+        std::cerr << "Invalid exponent in floating-point constant\n";
+        exit(1);
+      }
+      while (isdigit(*p)) ++p;
+    }
+
+    std::string value(start, p);
+
+    // Handle suffixes (only for integers)
     std::string suffix;
-    if (*end == 'u' || *end == 'U' || *end == 'l' || *end == 'L') {
-      suffix += tolower(*end);
-      ++end;
-      if (*end == 'u' || *end == 'U' || *end == 'l' || *end == 'L') {
-        suffix += tolower(*end);
-        ++end;
+    if (!isFloat && (*p == 'u' || *p == 'U' || *p == 'l' || *p == 'L')) {
+      suffix += tolower(*p);
+      ++p;
+      if (*p == 'u' || *p == 'U' || *p == 'l' || *p == 'L') {
+        suffix += tolower(*p);
+        ++p;
       }
 
       if (suffix == "l")
@@ -108,13 +126,18 @@ void Lexer::next(Token &token) {
         std::cerr << "Invalid integer suffix: " << suffix << "\n";
         exit(1);
       }
+    } else if (isFloat) {
+      token.type = TokenType::FLOAT_CONST;
+    } else {
+      token.type = TokenType::NUM; // default: signed int
     }
 
     token.value = value;
     token.line = line;
-    BufferPtr = end;
+    BufferPtr = p;
     return;
   }
+
 
   // Tokenizing Symbols
   switch (*BufferPtr) {

@@ -155,6 +155,26 @@ public:
     return this;
   }
 };
+//////////////////////////////////////////////////////////////////////////
+
+class ConstDouble : public Constant {
+public:
+  double value;
+  ConstDouble(double val) : value(val) {}
+  void print() override { cout << "ConstDouble: " << value << endl; }
+
+  std::vector<TAC> generateTAC(std::string &tempVar) override {
+    tempVar = "t" + std::to_string(tempVarCounter++);
+    return {TAC("li", std::to_string(value), "double", tempVar)};
+  }
+
+  void resolveSymbol(SymbolTable &) override {}
+
+  Expr *typeCheck(SymbolTable &) override {
+    this->setExprType(std::make_unique<DoubleType>());
+    return this;
+  }
+};
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -492,11 +512,23 @@ public:
 
     // Set the result type for the operation itself.
     switch (op) {
+    case TokenType::MOD:
+    case TokenType::BITWISE_AND:
+    case TokenType::BITWISE_OR:
+    case TokenType::BITWISE_XOR:
+    case TokenType::LEFT_SHIFT:
+    case TokenType::RIGHT_SHIFT:
+      if (common->getKind() == Type::Kind::DOUBLE) {
+        std::cerr
+            << "ERROR: Cannot apply modulus operator (%) to type 'double'\n";
+        exit(1);
+      }
+      this->setExprType(common->clone());
+      break;
     case TokenType::PLUS:
     case TokenType::MINUS:
     case TokenType::MUL:
     case TokenType::DIV:
-    case TokenType::MOD:
       this->setExprType(common->clone());
       break;
     default: // Relational and equality operators result in int.
@@ -605,8 +637,15 @@ public:
     }
 
     switch (op) {
-    case TokenType::MINUS:
     case TokenType::COMPLEMENT:
+      if (innerType->getKind() == Type::Kind::DOUBLE) {
+        std::cerr
+            << "ERROR: Cannot apply bitwise complement (~) to type 'double'\n";
+        exit(1);
+      }
+      this->setExprType(innerType->clone());
+      break;
+    case TokenType::MINUS:
     case TokenType::INCREMENT:
     case TokenType::DECREMENT:
       // Propagate operand's type
@@ -869,37 +908,49 @@ public:
       return code;
     }
 
-    int fromSize = TypeChecker::getTypeSize(fromType);
-    int toSize = TypeChecker::getTypeSize(toType);
-
     // Create a new temporary variable for the result
     tempVar = "t" + std::to_string(AST::tempVarCounter++);
 
-    // Create result temp
-    tempVar = "t" + std::to_string(AST::tempVarCounter++);
-
     std::string inst;
+    Type::Kind fromKind = fromType->getKind();
+    Type::Kind toKind = toType->getKind();
 
-    // Same size but different types (e.g. int <-> unsigned int)
-    if (fromSize == toSize) {
-      inst = "Copy";
-    }
-    // Truncation
-    else if (toSize < fromSize) {
-      inst = "Truncate";
-    }
-    // Widening
-    else if (toSize > fromSize) {
-      // Determine signedness of source
-      bool fromSigned = (fromType->getKind() == Type::Kind::INT ||
-                         fromType->getKind() == Type::Kind::LONG);
-      inst = fromSigned ? "SignExtend" : "ZeroExtend";
+    if (fromKind == Type::Kind::DOUBLE) {
+      if (toKind == Type::Kind::INT) {
+        inst = "DoubleToInt";
+      } else if (toKind == Type::Kind::UNSIGNED_INT) {
+        inst = "DoubleToUInt";
+      } else {
+        std::cerr << "ERROR: Unsupported cast from double to "
+                  << toType->toString() << "\n";
+        exit(1);
+      }
+    } else if (toKind == Type::Kind::DOUBLE) {
+      if (fromKind == Type::Kind::INT) {
+        inst = "IntToDouble";
+      } else if (fromKind == Type::Kind::UNSIGNED_INT) {
+        inst = "UIntToDouble";
+      } else {
+        std::cerr << "ERROR: Unsupported cast from " << fromType->toString()
+                  << " to double\n";
+        exit(1);
+      }
     } else {
-      std::cerr << "ERROR: Unknown cast case\n";
-      exit(1);
+      // Fallback to truncation/widening logic
+      int fromSize = TypeChecker::getTypeSize(fromType);
+      int toSize = TypeChecker::getTypeSize(toType);
+
+      if (fromSize == toSize) {
+        inst = "Copy";
+      } else if (toSize < fromSize) {
+        inst = "Truncate";
+      } else {
+        bool fromSigned =
+            (fromKind == Type::Kind::INT || fromKind == Type::Kind::LONG);
+        inst = fromSigned ? "SignExtend" : "ZeroExtend";
+      }
     }
 
-    // Emit cast instruction
     code.emplace_back(inst, exprTemp, "", tempVar);
     return code;
   }

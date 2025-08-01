@@ -5,7 +5,7 @@
 
 class Type {
 public:
-  enum class Kind { INT, LONG, FUNCTION, UNSIGNED_INT, UNSIGNED_LONG };
+  enum class Kind { INT, LONG, FUNCTION, UNSIGNED_INT, UNSIGNED_LONG, DOUBLE };
   virtual Kind getKind() const = 0;
   virtual ~Type() = default;
 
@@ -46,6 +46,15 @@ public:
   std::string toString() const override { return "unsigned_long"; }
   std::unique_ptr<Type> clone() const override {
     return std::make_unique<UnsignedLongType>(*this);
+  }
+};
+
+class DoubleType : public Type {
+public:
+  Kind getKind() const override { return Kind::DOUBLE; }
+  std::string toString() const override { return "double"; }
+  std::unique_ptr<Type> clone() const override {
+    return std::make_unique<DoubleType>(*this);
   }
 };
 

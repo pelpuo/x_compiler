@@ -38,6 +38,11 @@ const Type *TypeChecker::get_common_type(const Type *t1, const Type *t2) {
   if (t1->getKind() == t2->getKind()) {
     return t1;
   }
+  
+  // ❶ If types are identical
+  if ((t1->getKind() == Type::Kind::DOUBLE) || (t2->getKind() == Type::Kind::DOUBLE)) {
+    return std::make_unique<DoubleType>().release();
+  }
 
   auto isSigned = [](const Type *t) -> bool {
     return t->getKind() == Type::Kind::INT || t->getKind() == Type::Kind::LONG;
