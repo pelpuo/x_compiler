@@ -7,15 +7,13 @@ main:
     sd s0, 48(sp)
     addi s0, sp, 64
     li t0, 10
-    slli t1, t0, 32
-    srli t1, t1, 32
+    mv t1, t0
     sw t1, -20(s0)
     li t2, 20
     sw t2, -24(s0)
     lw t3, -20(s0)
     lw t4, -24(s0)
-    slli t5, t4, 32
-    srli t5, t5, 32
+    mv t5, t4
     add t6, t3, t5
     sw t6, -28(s0)
     lw t0, -28(s0)

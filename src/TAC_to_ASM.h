@@ -439,6 +439,13 @@ public:
           outfile << "    slli " << dst << ", " << src << ", 32\n";
           outfile << "    srli " << dst << ", " << dst << ", 32\n";
         }
+      } else if (tac.op == "Copy"){
+        std::string src = ensureLoaded(tac.arg1);
+        std::string dst = mapToRegister(tac.result);
+        outfile << "    mv " << dst << ", " << src << "\n";
+      } else {
+        std::cerr << "ERROR: Unknown TAC operation: " << tac.op << "\n";
+        exit(1);
       }
       // else {
       //   std::cerr << "ERROR: Unknown TAC operation: " << tac.op << "\n";

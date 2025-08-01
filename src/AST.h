@@ -858,62 +858,49 @@ public:
     Type *fromType = expr->getExprType();
     Type *toType = this->type.get();
 
+    if (!fromType || !toType) {
+      std::cerr << "ERROR: Cast has null type\n";
+      exit(1);
+    }
+
     // If type is unchanged, no cast needed
     if (fromType->getKind() == toType->getKind()) {
       tempVar = exprTemp;
       return code;
     }
 
+    int fromSize = TypeChecker::getTypeSize(fromType);
+    int toSize = TypeChecker::getTypeSize(toType);
+
     // Create a new temporary variable for the result
     tempVar = "t" + std::to_string(AST::tempVarCounter++);
 
-    // Determine the cast instruction
-    std::string inst;
-    if (toType->getKind() == Type::Kind::LONG &&
-        fromType->getKind() == Type::Kind::INT) {
-      inst = "SignExtend";
-    } else if (toType->getKind() == Type::Kind::INT &&
-               fromType->getKind() == Type::Kind::LONG) {
-      inst = "Truncate";
-    } else if (toType->getKind() == Type::Kind::UNSIGNED_LONG &&
-               fromType->getKind() == Type::Kind::INT) {
-      inst = "ZeroExtend";
-    } else if (toType->getKind() == Type::Kind::UNSIGNED_LONG &&
-               fromType->getKind() == Type::Kind::UNSIGNED_INT) {
-      inst = "ZeroExtend";
-    } else if (toType->getKind() == Type::Kind::UNSIGNED_INT &&
-               fromType->getKind() == Type::Kind::INT) {
-      inst = "ZeroExtend"; // or "Bitcast"
-    } else if (toType->getKind() == Type::Kind::UNSIGNED_LONG &&
-               fromType->getKind() == Type::Kind::LONG) {
-      inst = "ZeroExtend"; // or "Bitcast"
-    }
+    // Create result temp
+    tempVar = "t" + std::to_string(AST::tempVarCounter++);
 
-    //  else if (toType->getKind() == Type::Kind::UNSIGNED_INT &&
-    //            fromType->getKind() == Type::Kind::LONG) {
-    //   inst = "UnsignedTruncate";
-    // } else if (toType->getKind() == Type::Kind::FLOAT &&
-    //            fromType->getKind() == Type::Kind::INT) {
-    //   inst = "IntToFloat";
-    // } else if (toType->getKind() == Type::Kind::DOUBLE &&
-    //            fromType->getKind() == Type::Kind::LONG) {
-    //   inst = "LongToDouble";
-    // } else if (toType->getKind() == Type::Kind::INT &&
-    //            fromType->getKind() == Type::Kind::FLOAT) {
-    //   inst = "FloatToInt";
-    // } else if (toType->getKind() == Type::Kind::LONG &&
-    //            fromType->getKind() == Type::Kind::DOUBLE) {
-    //   inst = "DoubleToLong";
-    // }
-    else {
-      std::cerr << "ERROR: Unsupported cast from " << fromType->toString()
-                << " to " << toType->toString() << std::endl;
+    std::string inst;
+
+    // Same size but different types (e.g. int <-> unsigned int)
+    if (fromSize == toSize) {
+      inst = "Copy";
+    }
+    // Truncation
+    else if (toSize < fromSize) {
+      inst = "Truncate";
+    }
+    // Widening
+    else if (toSize > fromSize) {
+      // Determine signedness of source
+      bool fromSigned = (fromType->getKind() == Type::Kind::INT ||
+                         fromType->getKind() == Type::Kind::LONG);
+      inst = fromSigned ? "SignExtend" : "ZeroExtend";
+    } else {
+      std::cerr << "ERROR: Unknown cast case\n";
       exit(1);
     }
 
     // Emit cast instruction
     code.emplace_back(inst, exprTemp, "", tempVar);
-
     return code;
   }
 

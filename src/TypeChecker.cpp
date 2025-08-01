@@ -1,6 +1,21 @@
 #include "TypeChecker.h"
 #include "AST.h"
 
+int TypeChecker::getTypeSize(const Type *t) {
+  switch (t->getKind()) {
+    case Type::Kind::INT:
+    case Type::Kind::UNSIGNED_INT:
+      return 4;
+    case Type::Kind::LONG:
+    case Type::Kind::UNSIGNED_LONG:
+      return 8;
+    default:
+      std::cerr << "Unknown type in getTypeSize()\n";
+      exit(1);
+  }
+}
+
+
 Expr *TypeChecker::convert_to(Expr *e, const Type *target) {
   // cout << "Converting " << e->getExprType()->toString()
   //     << " to " << target->toString() << "for expression: ";
@@ -24,27 +39,12 @@ const Type *TypeChecker::get_common_type(const Type *t1, const Type *t2) {
     return t1;
   }
 
-  // Helper lambdas for size and signedness
-  auto getSize = [](const Type *t) -> int {
-    switch (t->getKind()) {
-    case Type::Kind::INT:
-    case Type::Kind::UNSIGNED_INT:
-      return 4;
-    case Type::Kind::LONG:
-    case Type::Kind::UNSIGNED_LONG:
-      return 8;
-    default:
-      std::cerr << "ERROR: Unsupported type in getSize()\n";
-      exit(1);
-    }
-  };
-
   auto isSigned = [](const Type *t) -> bool {
     return t->getKind() == Type::Kind::INT || t->getKind() == Type::Kind::LONG;
   };
 
-  int size1 = getSize(t1);
-  int size2 = getSize(t2);
+  int size1 = getTypeSize(t1);
+  int size2 = getTypeSize(t2);
 
   // ❷ If sizes are equal
   if (size1 == size2) {
