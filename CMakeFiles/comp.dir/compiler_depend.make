@@ -235,7 +235,7 @@ CMakeFiles/comp.dir/src/TAC_to_ASM.cpp.o: src/TAC_to_ASM.cpp \
 
 CMakeFiles/comp.dir/src/TypeChecker.cpp.o: src/TypeChecker.cpp \
   /usr/include/stdc-predef.h \
-  src/AST.h \
+  src/TypeChecker.h \
   src/SymbolTable.h \
   /usr/include/c++/11/iostream \
   /usr/include/x86_64-linux-gnu/c++/11/bits/c++config.h \
@@ -454,13 +454,13 @@ CMakeFiles/comp.dir/src/TypeChecker.cpp.o: src/TypeChecker.cpp \
   /usr/include/c++/11/pstl/glue_memory_defs.h \
   /usr/include/c++/11/pstl/execution_defs.h \
   src/lexer.h \
+  src/AST.h \
   src/TAC.h \
   /usr/include/c++/11/fstream \
   /usr/include/c++/11/bits/codecvt.h \
   /usr/include/x86_64-linux-gnu/c++/11/bits/basic_file.h \
   /usr/include/x86_64-linux-gnu/c++/11/bits/c++io.h \
-  /usr/include/c++/11/bits/fstream.tcc \
-  src/TypeChecker.h
+  /usr/include/c++/11/bits/fstream.tcc
 
 CMakeFiles/comp.dir/src/lexer.cpp.o: src/lexer.cpp \
   /usr/include/stdc-predef.h \

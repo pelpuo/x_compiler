@@ -14,7 +14,7 @@ enum class SymbolType { VARIABLE, FUNCTION };
 enum class InitKind { NoInitializer, Tentative, Initial };
 
 struct StaticInit {
-  enum class Kind { IntInit, LongInit } kind;
+  enum class Kind { IntInit, LongInit, UIntInit, ULongInit } kind;
   union {
     int intVal;
     long long longVal;
@@ -22,6 +22,10 @@ struct StaticInit {
 
   StaticInit(int val) : kind(Kind::IntInit), intVal(val) {}
   StaticInit(long long val) : kind(Kind::LongInit), longVal(val) {}
+  StaticInit(unsigned int val)
+      : kind(Kind::UIntInit), intVal(static_cast<int>(val)) {}
+  StaticInit(unsigned long long val)
+      : kind(Kind::ULongInit), longVal(static_cast<long long>(val)) {}
 
   StaticInit(const StaticInit &other) {
     kind = other.kind;
@@ -91,6 +95,24 @@ class SymbolTable {
 
   std::vector<std::unordered_map<std::string, SymbolInfo>> scopes;
 
+  StaticInit convertStaticInit(const Type *type, int rawVal) {
+    switch (type->getKind()) {
+    case Type::Kind::INT:
+      return StaticInit(static_cast<int>(rawVal));
+    case Type::Kind::LONG:
+      return StaticInit(static_cast<long long>(rawVal));
+    case Type::Kind::UNSIGNED_INT:
+      return StaticInit(
+          static_cast<unsigned int>(static_cast<uint32_t>(rawVal)));
+    case Type::Kind::UNSIGNED_LONG:
+      return StaticInit(
+          static_cast<unsigned long long>(static_cast<uint64_t>(rawVal)));
+    default:
+      std::cerr << "ERROR: Unsupported static initializer type\n";
+      exit(1);
+    }
+  }
+
 public:
   std::unordered_map<std::string, SymbolInfo>
       globalScope; // Stores file-scope decls and all functions
@@ -155,6 +177,30 @@ public:
       return true;
     }
 
+    // Convert static initializer to proper type if present
+    if (newInit.kind == InitKind::Initial && newInit.value.has_value()) {
+      int rawVal;
+      switch (newInit.value->kind) {
+      case StaticInit::Kind::IntInit:
+        rawVal = newInit.value->intVal;
+        break;
+      case StaticInit::Kind::LongInit:
+        rawVal = static_cast<int>(newInit.value->longVal);
+        break;
+      case StaticInit::Kind::UIntInit:
+        rawVal = newInit.value->intVal;
+        break;
+      case StaticInit::Kind::ULongInit:
+        rawVal = static_cast<int>(newInit.value->longVal);
+        break;
+      default:
+        std::cerr << "ERROR: Unknown static initializer kind\n";
+        exit(1);
+      }
+
+      newInit.value = convertStaticInit(type.get(), rawVal);
+    }
+
     // New declaration
     SymbolInfo info;
     info.type = SymbolType::VARIABLE;
@@ -202,12 +248,17 @@ public:
       InitialValue init;
       init.kind = InitKind::Initial;
       // init.value = constantInit.value_or(0);
+      // if (constantInit.has_value()) {
+      //   if (info.declaredType.get()->getKind() == Type::Kind::LONG) {
+      //     init.value = StaticInit(static_cast<long
+      //     long>(constantInit.value()));
+      //   } else {
+      //     init.value = StaticInit(constantInit.value());
+      //   }
+      // }
       if (constantInit.has_value()) {
-        if (info.declaredType.get()->getKind() == Type::Kind::LONG) {
-          init.value = StaticInit(static_cast<long long>(constantInit.value()));
-        } else {
-          init.value = StaticInit(constantInit.value());
-        }
+        init.value =
+            convertStaticInit(info.declaredType.get(), constantInit.value());
       }
 
       return declareVariable(name, info.declaredType->clone(), sc, init);
@@ -240,8 +291,8 @@ public:
         return false;
       scopes.back()[name] = std::move(info);
     }
-    // std::cerr << "[SymbolTable] (declare) Scope depth = " << scopes.size() << "\n";
-    // std::cerr << "[SymbolTable] Declaring '" << name << "'\n";
+    // std::cerr << "[SymbolTable] (declare) Scope depth = " << scopes.size() <<
+    // "\n"; std::cerr << "[SymbolTable] Declaring '" << name << "'\n";
 
     return true;
   }
@@ -312,8 +363,8 @@ public:
   }
 
   std::optional<SymbolInfo> resolve(const std::string &name) {
-    // std::cerr << "[SymbolTable] (resolve) Scope depth = " << scopes.size() << "\n";
-    // std::cerr << "[SymbolTable] Resolving '" << name << "'\n";
+    // std::cerr << "[SymbolTable] (resolve) Scope depth = " << scopes.size() <<
+    // "\n"; std::cerr << "[SymbolTable] Resolving '" << name << "'\n";
 
     for (auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
       if (it->count(name))

@@ -150,6 +150,7 @@ bool Parser::isTypeSpecifier(TokenType type) {
   case TokenType::LONG:
   case TokenType::UNSIGNED:
   case TokenType::VOID:
+  case TokenType::SIGNED:
     return true;
   default:
     return false;
@@ -232,6 +233,7 @@ BlockItem *Parser::parseBlockItem() {
   // Check if the next token is a type specifier (indicating a declaration)
   if (token.type == TokenType::INT || token.type == TokenType::STATIC ||
       token.type == TokenType::EXTERN || token.type == TokenType::CONST ||
+      token.type == TokenType::SIGNED || token.type == TokenType::UNSIGNED ||
       token.type == TokenType::LONG) {
     return parseDeclaration();
   } else {
@@ -409,6 +411,7 @@ Stmt *Parser::parseStatement() {
     std::unique_ptr<BlockItem> init;
     if (token.type == TokenType::INT || token.type == TokenType::STATIC ||
         token.type == TokenType::EXTERN || token.type == TokenType::CONST ||
+        token.type == TokenType::SIGNED || token.type == TokenType::UNSIGNED ||
         token.type == TokenType::LONG) {
       // consume(TokenType::INT); // Consume 'int' keyword
       auto [type, storage, TypeQualifier] = parseTypeAndStorageClass();
@@ -567,22 +570,8 @@ Expr *Parser::parseTerm() { return nullptr; }
 Expr *Parser::parseFactor() {
   Expr *base;
 
-  // if (token.type == TokenType::NUM) {
-  //   string tokentext = token.value.value();
-  //   consume(TokenType::NUM);
-  //   base = new IntLiteral(stoi(tokentext));
-  // } else if (token.type == TokenType::LONG_CONST) {
-  //   string tokentext = token.value.value();
-  //   consume(TokenType::LONG_CONST);
-  //   try {
-  //     long longValue = std::stoll(tokentext);
-  //     base = new ConstLong(longValue);
-  //   } catch (const std::exception &) {
-  //     std::cerr << "ERROR: Invalid long constant value\n";
-  //     exit(1);
-  //   }
-  // }
-  if (token.type == TokenType::NUM || token.type == TokenType::LONG_CONST) {
+  if (token.type == TokenType::NUM || token.type == TokenType::LONG_CONST || 
+      token.type == TokenType::UNSIGNED_LONG_CONST || token.type == TokenType::UNSIGNED_INT_CONST) {
     base = parseConstant();
   } else if (token.type == TokenType::LEFT_PAREN) {
     consume(TokenType::LEFT_PAREN);
@@ -653,14 +642,18 @@ Parser::parseTypeAndStorageClass() {
   // Collect all valid type/storage/qualifier specifiers
   while (token.type == TokenType::STATIC || token.type == TokenType::EXTERN ||
          token.type == TokenType::CONST || token.type == TokenType::INT ||
+         token.type == TokenType::SIGNED || token.type == TokenType::UNSIGNED ||
          token.type == TokenType::LONG) {
     specifiers.push_back(token.type);
     advance();
   }
 
+  // Flags for specifiers
   bool seenConst = false;
   bool seenInt = false;
   bool seenLong = false;
+  bool seenSigned = false;
+  bool seenUnsigned = false;
   StorageClass storage = StorageClass::NONE;
 
   for (TokenType spec : specifiers) {
@@ -678,6 +671,20 @@ Parser::parseTypeAndStorageClass() {
         exit(1);
       }
       seenLong = true;
+      break;
+    case TokenType::SIGNED:
+      if (seenSigned || seenUnsigned) {
+        std::cerr << "ERROR: Cannot combine 'signed' and 'unsigned'\n";
+        exit(1);
+      }
+      seenSigned = true;
+      break;
+    case TokenType::UNSIGNED:
+      if (seenSigned || seenUnsigned) {
+        std::cerr << "ERROR: Cannot combine 'signed' and 'unsigned'\n";
+        exit(1);
+      }
+      seenUnsigned = true;
       break;
     case TokenType::CONST:
       if (seenConst) {
@@ -705,54 +712,74 @@ Parser::parseTypeAndStorageClass() {
     }
   }
 
-  // Determine the base type
+  // Determine base type
   std::unique_ptr<Type> baseType;
 
-  if (seenLong) {
-    baseType = std::make_unique<LongType>();
-  } else if (seenInt && (!seenLong)) {
-    // default type is int if nothing is specified
-    baseType = std::make_unique<IntType>();
+  if (seenUnsigned) {
+    if (seenLong)
+      baseType = std::make_unique<UnsignedLongType>();
+    else
+      baseType = std::make_unique<UnsignedIntType>();
+  } else if (seenSigned) {
+    if (seenLong)
+      baseType = std::make_unique<LongType>(); // signed long == long
+    else
+      baseType = std::make_unique<IntType>(); // signed int == int
   } else {
-    std::cerr << "ERROR: Invalid or unsupported type combination\n";
-    exit(1);
+    if (seenLong)
+      baseType = std::make_unique<LongType>();
+    else
+      baseType = std::make_unique<IntType>(); // default is signed int
   }
 
   TypeQualifier qualifier =
       seenConst ? TypeQualifier::CONST : TypeQualifier::NONE;
-
   return {std::move(baseType), storage, qualifier};
 }
 
 Expr *Parser::parseConstant() {
-  if (token.type == TokenType::NUM) {
-    std::string tokentext = token.value.value();
+  std::string tokentext = token.value.value();
 
+  // Handle unsigned int
+  if (token.type == TokenType::UNSIGNED_INT_CONST) {
     uint64_t v;
     try {
       v = std::stoull(tokentext);
     } catch (const std::exception &) {
-      std::cerr << "ERROR: Invalid constant value\n";
+      std::cerr << "ERROR: Invalid unsigned int constant value\n";
       exit(1);
     }
 
-    if (v > INT64_MAX) {
-      std::cerr
-          << "ERROR: Constant is too large to represent as an int or long\n";
+    if (v > UINT32_MAX) {
+      std::cerr << "ERROR: Value too large for unsigned int\n";
       exit(1);
     }
 
-    // consume(TokenType::NUM);
-    consume(token.type); // Consume either NUM or LONG_CONST
+    consume(TokenType::UNSIGNED_INT_CONST);
+    return new ConstUnsignedInt(static_cast<unsigned int>(v));
+  }
 
-    if (v <= INT32_MAX) {
-      return new ConstInt(static_cast<int>(v));
-    } else {
-      return new ConstLong(static_cast<long long>(v));
+  // Handle unsigned long
+  if (token.type == TokenType::UNSIGNED_LONG_CONST) {
+    uint64_t v;
+    try {
+      v = std::stoull(tokentext);
+    } catch (const std::exception &) {
+      std::cerr << "ERROR: Invalid unsigned long constant value\n";
+      exit(1);
     }
 
-  } else if (token.type == TokenType::LONG_CONST) {
-    std::string tokentext = token.value.value();
+    if (v > UINT64_MAX) {
+      std::cerr << "ERROR: Value too large for unsigned long\n";
+      exit(1);
+    }
+
+    consume(TokenType::UNSIGNED_LONG_CONST);
+    return new ConstUnsignedLong(static_cast<unsigned long>(v));
+  }
+
+  // Handle signed long
+  if (token.type == TokenType::LONG_CONST) {
     long long v;
     try {
       v = std::stoll(tokentext);
@@ -760,12 +787,35 @@ Expr *Parser::parseConstant() {
       std::cerr << "ERROR: Invalid long constant value\n";
       exit(1);
     }
-    consume(TokenType::LONG_CONST); // Consume LONG_CONST
-    return new ConstLong(v);
-  } else {
-    error();
-    return nullptr; // Prevent control reaching end of non-void
+
+    consume(TokenType::LONG_CONST);
+    return new ConstLong(static_cast<long>(v));
   }
+
+  // Default: plain NUM (could be int or long)
+  if (token.type == TokenType::NUM) {
+    uint64_t v;
+    try {
+      v = std::stoull(tokentext);
+    } catch (const std::exception &) {
+      std::cerr << "ERROR: Invalid numeric constant value\n";
+      exit(1);
+    }
+
+    if (v <= INT32_MAX) {
+      consume(TokenType::NUM);
+      return new ConstInt(static_cast<int>(v));
+    } else if (v <= INT64_MAX) {
+      consume(TokenType::NUM);
+      return new ConstLong(static_cast<long>(v));
+    } else {
+      std::cerr << "ERROR: Constant too large for signed long\n";
+      exit(1);
+    }
+  }
+
+  error(); // fallback
+  return nullptr;
 }
 
 Expr *Parser::parseCast() {

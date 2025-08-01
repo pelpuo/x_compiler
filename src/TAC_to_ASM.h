@@ -55,7 +55,7 @@ private:
           outfile << ".globl " << name << "\n";
         }
         outfile << name << ":\n";
-        if (type == "int") {
+        if (type == "int" || type == "unsigned_int") {
           outfile << "    .word " << tac.result << "\n";
         } else {
           outfile << "    .quad " << tac.result << "\n";
@@ -88,7 +88,10 @@ private:
   std::string ensureLoaded(const std::string &name) {
     std::string reg = mapToRegister(name);
     if (isVariable(name) && varMap.find(name) != varMap.end()) {
-      std::string op = (varMap[name].type == "int") ? "lw" : "ld";
+      std::string op =
+          (varMap[name].type == "int" || varMap[name].type == "unsigned_int")
+              ? "lw"
+              : "ld";
       outfile << "    " << op << " " << reg << ", " << varMap[name].offset
               << "(s0)\n";
     }
@@ -146,11 +149,12 @@ public:
         std::string srcReg = ensureLoaded(tac.arg1);
         // std::string type = tac.arg2.empty() ? "long" : tac.arg2;
         std::string type = tac.arg2;
-        std::string op = (type == "int") ? "sw" : "sd";
+        std::string op =
+            (type == "int" || type == "unsigned_int") ? "sw" : "sd";
 
         // Allocate stack slot for local variable if not already done
         if (varMap.count(tac.result) == 0) {
-          int size = (type == "int") ? 4 : 8;
+          int size = (type == "int" || type == "unsigned_int") ? 4 : 8;
           stackOffset -= size;
           varMap[tac.result] = {stackOffset, type};
         }
@@ -169,7 +173,7 @@ public:
 
       else if (tac.op == "load") {
         std::string dstReg = mapToRegister(tac.result);
-        std::string op = (tac.arg2 == "int") ? "lw" : "ld";
+        std::string op = (tac.arg2 == "int" || tac.arg2 == "unsigned_int" ) ? "lw" : "ld";
 
         if (varMap.count(tac.arg1)) {
           // Local variable (on stack)
@@ -322,12 +326,13 @@ public:
           type = varMap[tac.arg1].type;
 
         if (varMap.count(tac.result) == 0) {
-          size = (type == "int") ? 4 : 8;
+          size = (type == "int" || type == "unsigned_int") ? 4 : 8;
           stackOffset -= size;
           varMap[tac.result] = {stackOffset, type};
         }
 
-        std::string op = (type == "int") ? "sw" : "sd";
+        std::string op =
+            (type == "int" || type == "unsigned_int") ? "sw" : "sd";
 
         // Always use s0-relative offset for locals
         outfile << "    " << op << " " << srcReg << ", "
@@ -406,7 +411,10 @@ public:
         }
 
         std::string reg = mapToArgRegister(tac.arg1, paramIndex++);
-        std::string op = (varMap[tac.arg1].type == "int") ? "sw" : "sd";
+        std::string op = (varMap[tac.arg1].type == "int" ||
+                          varMap[tac.arg1].type == "unsigned_int")
+                             ? "sw"
+                             : "sd";
         outfile << "    " << op << " " << reg << ", " << varMap[tac.arg1].offset
                 << "(s0)\n";
       } else if (tac.op == "SignExtend") {
@@ -419,7 +427,23 @@ public:
         std::string dst = mapToRegister(tac.result);
         outfile << "    addiw " << dst << ", " << src
                 << ", 0\n"; // truncates to 32-bit
+      } else if (tac.op == "ZeroExtend") {
+        std::string src = ensureLoaded(tac.arg1);
+        std::string dst = mapToRegister(tac.result);
+
+        if (src == dst) {
+          // Defensive: avoid clobbering if in-place
+          outfile << "    slli " << dst << ", " << src << ", 32\n";
+          outfile << "    srli " << dst << ", " << dst << ", 32\n";
+        } else {
+          outfile << "    slli " << dst << ", " << src << ", 32\n";
+          outfile << "    srli " << dst << ", " << dst << ", 32\n";
+        }
       }
+      // else {
+      //   std::cerr << "ERROR: Unknown TAC operation: " << tac.op << "\n";
+      //   exit(1);
+      // }
     }
   }
 };

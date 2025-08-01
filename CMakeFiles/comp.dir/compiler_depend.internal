@@ -238,7 +238,7 @@ CMakeFiles/comp.dir/src/TAC_to_ASM.cpp.o
 CMakeFiles/comp.dir/src/TypeChecker.cpp.o
  /home/panda/Documents/Github/micomp/src/TypeChecker.cpp
  /usr/include/stdc-predef.h
- /home/panda/Documents/Github/micomp/src/AST.h
+ /home/panda/Documents/Github/micomp/src/TypeChecker.h
  /home/panda/Documents/Github/micomp/src/SymbolTable.h
  /usr/include/c++/11/iostream
  /usr/include/x86_64-linux-gnu/c++/11/bits/c++config.h
@@ -457,13 +457,13 @@ CMakeFiles/comp.dir/src/TypeChecker.cpp.o
  /usr/include/c++/11/pstl/glue_memory_defs.h
  /usr/include/c++/11/pstl/execution_defs.h
  /home/panda/Documents/Github/micomp/src/lexer.h
+ /home/panda/Documents/Github/micomp/src/AST.h
  /home/panda/Documents/Github/micomp/src/TAC.h
  /usr/include/c++/11/fstream
  /usr/include/c++/11/bits/codecvt.h
  /usr/include/x86_64-linux-gnu/c++/11/bits/basic_file.h
  /usr/include/x86_64-linux-gnu/c++/11/bits/c++io.h
  /usr/include/c++/11/bits/fstream.tcc
- /home/panda/Documents/Github/micomp/src/TypeChecker.h
 
 CMakeFiles/comp.dir/src/lexer.cpp.o
  /home/panda/Documents/Github/micomp/src/lexer.cpp

@@ -115,21 +115,21 @@ public:
 };
 
 //////////////////////////////////////////////////////////////////////////
+
 class ConstInt : public Constant {
 public:
   int value;
   ConstInt(int val) : value(val) {}
-  void print() { cout << "ConstInt: " << value << endl; }
+  void print() override { cout << "ConstInt: " << value << endl; }
 
   std::vector<TAC> generateTAC(std::string &tempVar) override {
-    std::vector<TAC> code;
     tempVar = "t" + std::to_string(tempVarCounter++);
-    code.push_back(TAC("li", std::to_string(value), "int", tempVar));
-    return code;
+    return {TAC("li", std::to_string(value), "int", tempVar)};
   }
-  void resolveSymbol(SymbolTable &symTab) override {}
 
-  Expr *typeCheck(SymbolTable &symTab) override {
+  void resolveSymbol(SymbolTable &) override {}
+
+  Expr *typeCheck(SymbolTable &) override {
     this->setExprType(std::make_unique<IntType>());
     return this;
   }
@@ -139,20 +139,61 @@ public:
 
 class ConstLong : public Constant {
 public:
-  int value;
+  long value;
   ConstLong(long val) : value(val) {}
-  void print() { cout << "CosntIntL: " << value << endl; }
+  void print() override { cout << "ConstLong: " << value << endl; }
 
   std::vector<TAC> generateTAC(std::string &tempVar) override {
-    std::vector<TAC> code;
     tempVar = "t" + std::to_string(tempVarCounter++);
-    code.push_back(TAC("li", std::to_string(value), "long", tempVar));
-    return code;
+    return {TAC("li", std::to_string(value), "long", tempVar)};
   }
-  void resolveSymbol(SymbolTable &symTab) override {}
 
-  Expr *typeCheck(SymbolTable &symTab) override {
+  void resolveSymbol(SymbolTable &) override {}
+
+  Expr *typeCheck(SymbolTable &) override {
     this->setExprType(std::make_unique<LongType>());
+    return this;
+  }
+};
+
+//////////////////////////////////////////////////////////////////////////
+
+class ConstUnsignedLong : public Constant {
+public:
+  unsigned long value;
+  ConstUnsignedLong(unsigned long val) : value(val) {}
+  void print() override { cout << "ConstUnsignedLong: " << value << endl; }
+
+  std::vector<TAC> generateTAC(std::string &tempVar) override {
+    tempVar = "t" + std::to_string(tempVarCounter++);
+    return {TAC("li", std::to_string(value), "unsigned_long", tempVar)};
+  }
+
+  void resolveSymbol(SymbolTable &) override {}
+
+  Expr *typeCheck(SymbolTable &) override {
+    this->setExprType(std::make_unique<UnsignedLongType>());
+    return this;
+  }
+};
+
+//////////////////////////////////////////////////////////////////////////
+
+class ConstUnsignedInt : public Constant {
+public:
+  unsigned int value;
+  ConstUnsignedInt(unsigned int val) : value(val) {}
+  void print() override { cout << "ConstUnsignedInt: " << value << endl; }
+
+  std::vector<TAC> generateTAC(std::string &tempVar) override {
+    tempVar = "t" + std::to_string(tempVarCounter++);
+    return {TAC("li", std::to_string(value), "unsigned_int", tempVar)};
+  }
+
+  void resolveSymbol(SymbolTable &) override {}
+
+  Expr *typeCheck(SymbolTable &) override {
+    this->setExprType(std::make_unique<UnsignedIntType>());
     return this;
   }
 };
@@ -465,7 +506,6 @@ public:
 
     return this;
   }
-
 };
 //////////////////////////////////////////////////////////////////////////
 
@@ -473,7 +513,7 @@ class UnaryOp : public Expr {
 public:
   TokenType op;
   std::unique_ptr<Expr> operand;
-  bool isPostfix;                // [++ support]
+  bool isPostfix; // [++ support]
   // std::unique_ptr<Type> expType = std::make_unique<IntType>(); // <--- NEW
   // std::unique_ptr<Type> expType; // <--- NEW
 
@@ -627,7 +667,8 @@ public:
     code.insert(code.end(), valueCode.begin(), valueCode.end());
 
     // code.push_back(TAC("store", valueTemp, "int", nameTemp));
-    code.push_back(TAC("store", valueTemp, this->expType->toString(), nameTemp));
+    code.push_back(
+        TAC("store", valueTemp, this->expType->toString(), nameTemp));
 
     tempVar = valueTemp;
 
@@ -671,7 +712,6 @@ public:
     this->setExprType(lt->clone());
     return this;
   }
-
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -790,7 +830,6 @@ public:
     this->setExprType(lt->clone());
     return this;
   }
-
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -836,7 +875,37 @@ public:
     } else if (toType->getKind() == Type::Kind::INT &&
                fromType->getKind() == Type::Kind::LONG) {
       inst = "Truncate";
-    } else {
+    } else if (toType->getKind() == Type::Kind::UNSIGNED_LONG &&
+               fromType->getKind() == Type::Kind::INT) {
+      inst = "ZeroExtend";
+    } else if (toType->getKind() == Type::Kind::UNSIGNED_LONG &&
+               fromType->getKind() == Type::Kind::UNSIGNED_INT) {
+      inst = "ZeroExtend";
+    } else if (toType->getKind() == Type::Kind::UNSIGNED_INT &&
+               fromType->getKind() == Type::Kind::INT) {
+      inst = "ZeroExtend"; // or "Bitcast"
+    } else if (toType->getKind() == Type::Kind::UNSIGNED_LONG &&
+               fromType->getKind() == Type::Kind::LONG) {
+      inst = "ZeroExtend"; // or "Bitcast"
+    }
+
+    //  else if (toType->getKind() == Type::Kind::UNSIGNED_INT &&
+    //            fromType->getKind() == Type::Kind::LONG) {
+    //   inst = "UnsignedTruncate";
+    // } else if (toType->getKind() == Type::Kind::FLOAT &&
+    //            fromType->getKind() == Type::Kind::INT) {
+    //   inst = "IntToFloat";
+    // } else if (toType->getKind() == Type::Kind::DOUBLE &&
+    //            fromType->getKind() == Type::Kind::LONG) {
+    //   inst = "LongToDouble";
+    // } else if (toType->getKind() == Type::Kind::INT &&
+    //            fromType->getKind() == Type::Kind::FLOAT) {
+    //   inst = "FloatToInt";
+    // } else if (toType->getKind() == Type::Kind::LONG &&
+    //            fromType->getKind() == Type::Kind::DOUBLE) {
+    //   inst = "DoubleToLong";
+    // }
+    else {
       std::cerr << "ERROR: Unsupported cast from " << fromType->toString()
                 << " to " << toType->toString() << std::endl;
       exit(1);
@@ -935,9 +1004,44 @@ public:
 
   Expr *typeCheck(SymbolTable &symTab) override {
     std::cout << "Typechecking TernaryOp" << std::endl;
-    TypeChecker checker;
-    Expr *res = checker.typecheck(this, symTab);
-    this->expType = res->getExprType()->clone(); // optional, for safety
+
+    // Type check subexpressions
+    condition = std::unique_ptr<Expr>(condition->typeCheck(symTab));
+    trueExpr = std::unique_ptr<Expr>(trueExpr->typeCheck(symTab));
+    falseExpr = std::unique_ptr<Expr>(falseExpr->typeCheck(symTab));
+
+    const Type *condType = condition->getExprType();
+    if (!condType) {
+      std::cerr << "ERROR: Ternary condition must be of type int\n";
+      exit(1);
+    }
+
+    const Type *type1 = trueExpr->getExprType();
+    const Type *type2 = falseExpr->getExprType();
+    if (!type1 || !type2) {
+      std::cerr << "ERROR: Ternary branches must have valid types\n";
+      exit(1);
+    }
+
+    // Compute common type
+    const Type *common = TypeChecker::get_common_type(type1, type2);
+    if (!common) {
+      std::cerr
+          << "ERROR: Cannot determine common type in ternary expression\n";
+      exit(1);
+    }
+
+    // Perform implicit conversions if necessary
+    if (type1->getKind() != common->getKind()) {
+      trueExpr.reset(new Cast(std::move(trueExpr), common->clone()));
+    }
+
+    if (type2->getKind() != common->getKind()) {
+      falseExpr.reset(new Cast(std::move(falseExpr), common->clone()));
+    }
+
+    this->expType = common->clone();
+    return this;
   }
 };
 
@@ -1129,7 +1233,7 @@ public:
       }
     }
 
-    code.push_back(TAC("EXPR", tempVar, "", ""));
+    // code.push_back(TAC("EXPR", tempVar, "", ""));
     return code;
   }
 
@@ -1487,7 +1591,7 @@ public:
     }
 
     if (inc) {
-      Expr *incResult = inc->typeCheck(symTab); 
+      Expr *incResult = inc->typeCheck(symTab);
       if (incResult != inc.get()) {
         inc.reset(incResult);
       }
@@ -1830,20 +1934,15 @@ public:
       std::string initTemp;
       auto initCode = initializer->generateTAC(initTemp);
       code.insert(code.end(), initCode.begin(), initCode.end());
-      std::string typeStr = "long";
-      if (expType && expType->getKind() == Type::Kind::INT)
-        typeStr = "int";
-      code.push_back(TAC("store", initTemp, typeStr, name));
+
+      code.push_back(TAC("store", initTemp, expType->toString(), name));
       // code.push_back(TAC("HERE", "", "", ""));
     }
     if (!initializer) {
       std::string tempReg = "t0"; // Or use a real temp
-      std::string typeStr = "long";
-      if (expType && expType->getKind() == Type::Kind::INT)
-        typeStr = "int";
 
       code.push_back(TAC("li", "0", "", tempVar));
-      code.push_back(TAC("store", tempVar, typeStr, name));
+      code.push_back(TAC("store", tempVar, expType->toString(), name));
     }
 
     return code;
