@@ -76,7 +76,7 @@ class Expr : public AST {
 public:
   virtual ~Expr() = default;
 
-  std::unique_ptr<Type> expType = std::make_unique<IntType>(); // <--- NEW
+  std::unique_ptr<Type> expType = nullptr; // <--- NEW
 
   void setExprType(std::unique_ptr<Type> t) { expType = std::move(t); }
 
