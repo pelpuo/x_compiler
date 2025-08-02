@@ -1,7 +1,7 @@
 CMakeFiles/comp.dir/src/lexer.cpp.o: \
- /home/local/ASUAD/ekayang/Documents/Github/x_compiler/src/lexer.cpp \
+ /home/panda/Documents/Github/micomp/src/lexer.cpp \
  /usr/include/stdc-predef.h \
- /home/local/ASUAD/ekayang/Documents/Github/x_compiler/src/lexer.h \
+ /home/panda/Documents/Github/micomp/src/lexer.h \
  /usr/include/c++/11/string \
  /usr/include/x86_64-linux-gnu/c++/11/bits/c++config.h \
  /usr/include/x86_64-linux-gnu/c++/11/bits/os_defines.h \

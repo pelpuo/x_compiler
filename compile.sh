@@ -2,7 +2,7 @@
 
 clear && make && ./comp program.c
 riscv64-unknown-linux-gnu-as -o aprog.o aprog.S
-riscv64-unknown-linux-gnu-gcc -o aprog aprog.o -march=rv64imafd -mabi=lp64d -static
+riscv64-unknown-linux-gnu-gcc -o aprog aprog.o -march=rv64imafd -mabi=lp64d -static -lm
 
 echo
 echo "Executing Program..."
