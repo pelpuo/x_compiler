@@ -1,0 +1,32 @@
+[
+{
+  "directory": "/home/panda/Documents/Github/micomp/build",
+  "command": "/usr/bin/c++ -I/home/panda/Documents/Github/micomp/src -g -Wall -Wextra -Wpedantic -o CMakeFiles/comp.dir/src/AST.cpp.o -c /home/panda/Documents/Github/micomp/src/AST.cpp",
+  "file": "/home/panda/Documents/Github/micomp/src/AST.cpp"
+},
+{
+  "directory": "/home/panda/Documents/Github/micomp/build",
+  "command": "/usr/bin/c++ -I/home/panda/Documents/Github/micomp/src -g -Wall -Wextra -Wpedantic -o CMakeFiles/comp.dir/src/TAC_to_ASM.cpp.o -c /home/panda/Documents/Github/micomp/src/TAC_to_ASM.cpp",
+  "file": "/home/panda/Documents/Github/micomp/src/TAC_to_ASM.cpp"
+},
+{
+  "directory": "/home/panda/Documents/Github/micomp/build",
+  "command": "/usr/bin/c++ -I/home/panda/Documents/Github/micomp/src -g -Wall -Wextra -Wpedantic -o CMakeFiles/comp.dir/src/TypeChecker.cpp.o -c /home/panda/Documents/Github/micomp/src/TypeChecker.cpp",
+  "file": "/home/panda/Documents/Github/micomp/src/TypeChecker.cpp"
+},
+{
+  "directory": "/home/panda/Documents/Github/micomp/build",
+  "command": "/usr/bin/c++ -I/home/panda/Documents/Github/micomp/src -g -Wall -Wextra -Wpedantic -o CMakeFiles/comp.dir/src/lexer.cpp.o -c /home/panda/Documents/Github/micomp/src/lexer.cpp",
+  "file": "/home/panda/Documents/Github/micomp/src/lexer.cpp"
+},
+{
+  "directory": "/home/panda/Documents/Github/micomp/build",
+  "command": "/usr/bin/c++ -I/home/panda/Documents/Github/micomp/src -g -Wall -Wextra -Wpedantic -o CMakeFiles/comp.dir/src/main.cpp.o -c /home/panda/Documents/Github/micomp/src/main.cpp",
+  "file": "/home/panda/Documents/Github/micomp/src/main.cpp"
+},
+{
+  "directory": "/home/panda/Documents/Github/micomp/build",
+  "command": "/usr/bin/c++ -I/home/panda/Documents/Github/micomp/src -g -Wall -Wextra -Wpedantic -o CMakeFiles/comp.dir/src/parser.cpp.o -c /home/panda/Documents/Github/micomp/src/parser.cpp",
+  "file": "/home/panda/Documents/Github/micomp/src/parser.cpp"
+}
+]
