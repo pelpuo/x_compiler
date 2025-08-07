@@ -974,6 +974,111 @@ public:
 };
 
 //////////////////////////////////////////////////////////////////////////
+class AddrOf : public Expr {
+public:
+  std::unique_ptr<Expr> operand;
+  AddrOf(std::unique_ptr<Expr> operand) : operand(std::move(operand)) {}
+  void print() {
+    cout << "AddrOf: &";
+    operand->print();
+  }
+  std::vector<TAC> generateTAC(std::string &tempVar) override {
+    std::vector<TAC> code;
+    std::string operandTemp;
+
+    // Generate TAC for the operand
+    auto operandCode = operand->generateTAC(operandTemp);
+    code.insert(code.end(), operandCode.begin(), operandCode.end());
+
+    // Create a new temporary variable for the address
+    tempVar = "t" + std::to_string(tempVarCounter++);
+    code.push_back(TAC("addr", operandTemp, "", tempVar));
+
+    return code;
+  }
+
+  void resolveSymbol(SymbolTable &symTab) override {
+    operand->resolveSymbol(symTab);
+  }
+
+  Expr *typeCheck(SymbolTable &symTab) override {
+    std::cout << "Typechecking AddrOf" << std::endl;
+
+    // Type check the operand first
+    Expr *innerResult = operand->typeCheck(symTab);
+    if (innerResult != operand.get()) {
+      operand.reset(innerResult);
+    }
+
+    const Type *operandType = operand->getExprType();
+    if (!operandType) {
+      std::cerr << "ERROR: Missing type in AddrOf operand\n";
+      exit(1);
+    }
+
+    // The result type is a pointer to the operand's type
+    this->setExprType(std::make_unique<PointerType>(operandType->clone()));
+    return this;
+  }
+};
+
+//////////////////////////////////////////////////////////////////////////
+class Dereference : public Expr {
+public:
+  std::unique_ptr<Expr> operand;
+  Dereference(std::unique_ptr<Expr> operand) : operand(std::move(operand)) {}
+  void print() {
+    cout << "Dereference: *";
+    operand->print();
+  } 
+
+  std::vector<TAC> generateTAC(std::string &tempVar) override {
+    std::vector<TAC> code;
+    std::string operandTemp;
+
+    // Generate TAC for the operand
+    auto operandCode = operand->generateTAC(operandTemp);
+    code.insert(code.end(), operandCode.begin(), operandCode.end());
+
+    // Create a new temporary variable for the dereferenced value
+    tempVar = "t" + std::to_string(tempVarCounter++);
+    code.push_back(TAC("load", operandTemp, "", tempVar));
+
+    return code;
+  }
+
+  void resolveSymbol(SymbolTable &symTab) override {
+    operand->resolveSymbol(symTab);
+  }
+
+  Expr *typeCheck(SymbolTable &symTab) override {
+    std::cout << "Typechecking Dereference" << std::endl;
+
+    // Type check the operand first
+    Expr *innerResult = operand->typeCheck(symTab);
+    if (innerResult != operand.get()) {
+      operand.reset(innerResult);
+    }
+
+    const Type *operandType = operand->getExprType();
+    if (!operandType) {
+      std::cerr << "ERROR: Missing type in Dereference operand\n";
+      exit(1);
+    }
+
+    // The result type is the pointed-to type
+    if (operandType->getKind() != Type::Kind::POINTER) {
+      std::cerr << "ERROR: Dereference requires a pointer type\n";
+      exit(1);
+    }
+
+    this->setExprType(
+        static_cast<const PointerType *>(operandType)->referencedType->clone());
+    return this;
+  }
+};
+
+//////////////////////////////////////////////////////////////////////////
 
 class TernaryOp : public Expr {
 public:

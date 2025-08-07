@@ -5,12 +5,14 @@
 
 class Type {
 public:
-  enum class Kind { INT, LONG, FUNCTION, UNSIGNED_INT, UNSIGNED_LONG, DOUBLE };
+  enum class Kind { INT, LONG, FUNCTION, UNSIGNED_INT, UNSIGNED_LONG, DOUBLE, POINTER };
   virtual Kind getKind() const = 0;
   virtual ~Type() = default;
 
   virtual std::unique_ptr<Type> clone() const = 0;
   virtual std::string toString() const = 0;
+  virtual bool isFunctionType() const { return false; }
+  virtual bool isPointerType() const { return false; }
 };
 
 class IntType : public Type {
@@ -58,6 +60,30 @@ public:
   }
 };
 
+class PointerType : public Type {
+public:
+  std::unique_ptr<Type> referencedType;
+
+  explicit PointerType(std::unique_ptr<Type> ref)
+      : referencedType(std::move(ref)) {}
+
+  Kind getKind() const override { return Kind::POINTER; }
+
+  std::string toString() const override {
+    return referencedType ? referencedType->toString() + "*" : "void*";
+  }
+
+  std::unique_ptr<Type> clone() const override {
+    return std::make_unique<PointerType>(
+        referencedType ? referencedType->clone() : nullptr);
+  }
+
+  bool isPointerType() const override { return true; }
+
+};
+
+
+
 class FunctionType : public Type {
   std::vector<std::unique_ptr<Type>> paramTypes;
   std::unique_ptr<Type> returnType;
@@ -102,4 +128,5 @@ public:
   std::unique_ptr<Type> clone() const override {
     return std::make_unique<FunctionType>(*this); 
   }
+  bool isFunctionType() const override { return true; }
 };
