@@ -1,7 +1,7 @@
 // A global variable to test taking the address of global symbols.
-int global_var = 50;
 
 int main() {
+    int global_var = 50; 
     int local_var_a;
     int local_var_b;
     int *ptr; // Our pointer

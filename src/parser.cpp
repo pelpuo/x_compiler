@@ -164,53 +164,53 @@ ASTProgram *Parser::parse() {
   return Res;
 }
 
-// ASTProgram *Parser::parseProgram() {
-//   ASTProgram *program = new ASTProgram();
-//   FuncDecl *func;
-
-//   while (isTypeSpecifier(token.type) || token.type == TokenType::STATIC ||
-//          token.type == TokenType::EXTERN || token.type == TokenType::CONST) {
-//     Declaration *decl = parseDeclaration();
-//     FuncDecl *func = dynamic_cast<FuncDecl *>(decl);
-//     if (!func) {
-//       std::cerr << "ERROR: Top-level declarations must be functions\n";
-//       exit(1);
-//     }
-//     if (func->body)
-//       program->addFunction(std::unique_ptr<FuncDecl>(func));
-//     else
-//       program->addPrototype(std::unique_ptr<FuncDecl>(func));
-//   }
-
-//   return program;
-// }
-
 ASTProgram *Parser::parseProgram() {
   ASTProgram *program = new ASTProgram();
+  FuncDecl *func;
 
-  // Keep parsing as long as we see the start of a global declaration
-  while (token.type != TokenType::EOI) {
-    if (!isTypeSpecifier(token.type) && token.type != TokenType::STATIC &&
-        token.type != TokenType::EXTERN && token.type != TokenType::CONST) {
-      break; // Exit if it's not a declaration
-    }
-
-    // This will return either a FuncDecl* or a VarDecl*
+  while (isTypeSpecifier(token.type) || token.type == TokenType::STATIC ||
+         token.type == TokenType::EXTERN || token.type == TokenType::CONST) {
     Declaration *decl = parseDeclaration();
-
-    if (decl) {
-      // Instead of assuming it's a function, we add it to a general list.
-      // Your later compiler passes (resolveSymbol, typeCheck, generateTAC)
-      // will then operate on this list of declarations.
-      program->addDeclaration(std::unique_ptr<Declaration>(decl));
-    } else {
-      // If parseDeclaration returns null, something is wrong
-      error();
+    FuncDecl *func = dynamic_cast<FuncDecl *>(decl);
+    if (!func) {
+      std::cerr << "ERROR: Top-level declarations must be functions\n";
+      exit(1);
     }
+    if (func->body)
+      program->addFunction(std::unique_ptr<FuncDecl>(func));
+    else
+      program->addPrototype(std::unique_ptr<FuncDecl>(func));
   }
 
   return program;
 }
+
+// ASTProgram *Parser::parseProgram() {
+//   ASTProgram *program = new ASTProgram();
+
+//   // Keep parsing as long as we see the start of a global declaration
+//   while (token.type != TokenType::EOI) {
+//     if (!isTypeSpecifier(token.type) && token.type != TokenType::STATIC &&
+//         token.type != TokenType::EXTERN && token.type != TokenType::CONST) {
+//       break; // Exit if it's not a declaration
+//     }
+
+//     // This will return either a FuncDecl* or a VarDecl*
+//     Declaration *decl = parseDeclaration();
+
+//     if (decl) {
+//       // Instead of assuming it's a function, we add it to a general list.
+//       // Your later compiler passes (resolveSymbol, typeCheck, generateTAC)
+//       // will then operate on this list of declarations.
+//       program->addDeclaration(std::unique_ptr<Declaration>(decl));
+//     } else {
+//       // If parseDeclaration returns null, something is wrong
+//       error();
+//     }
+//   }
+
+//   return program;
+// }
 
 BlockItem *Parser::parseBlockItem() {
   // Check if the next token is a type specifier (indicating a declaration)

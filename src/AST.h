@@ -971,8 +971,8 @@ public:
       exit(1);
     }
     // if (!dynamic_cast<Variable *>(name.get())) {
-    //   std::cerr << "ERROR: LHS of assignment must be a variable." <<
-    //   std::endl; exit(1);
+    //   std::cerr << "ERROR: LHS of assignment must be a variable." << std::endl;
+    //   exit(1);
     // }
 
     // Simplify the conversion to a direct release-and-reset.
@@ -2456,7 +2456,6 @@ class ASTProgram : public AST {
 public:
   std::vector<std::unique_ptr<FuncDecl>> functions;
   std::vector<std::unique_ptr<FuncDecl>> prototypes;
-  std::vector<std::unique_ptr<Declaration>> declarations;
 
   void addFunction(std::unique_ptr<FuncDecl> func) {
     functions.push_back(std::move(func));
@@ -2464,10 +2463,6 @@ public:
 
   void addPrototype(std::unique_ptr<FuncDecl> proto) {
     prototypes.push_back(std::move(proto));
-  }
-
-  void addDeclaration(std::unique_ptr<Declaration> decl) {
-    declarations.push_back(std::move(decl));
   }
 
   void print() {
@@ -2487,24 +2482,15 @@ public:
   std::vector<TAC> generateTAC(std::string &tempVar,
                                const SymbolTable &symTab) {
     std::vector<TAC> code;
-    // for (auto &func : functions) {
-    //   std::string tempVar;
-    //   auto funcCode = func->generateTAC(tempVar);
-    //   code.insert(code.end(), funcCode.begin(), funcCode.end());
-    // }
-
-    // // Emit static variables from symbol table
-    // auto staticDefs = convertSymbolsToTAC(symTab);
-    // code.insert(code.end(), staticDefs.begin(), staticDefs.end());
-
-    // Iterate over ALL declarations that the parser found.
-    for (const auto &decl : declarations) {
-      if (decl) {         // Safety check
-        std::string temp; // Dummy temp var for the call
-        auto declCode = decl->generateTAC(temp);
-        code.insert(code.end(), declCode.begin(), declCode.end());
-      }
+    for (auto &func : functions) {
+      std::string tempVar;
+      auto funcCode = func->generateTAC(tempVar);
+      code.insert(code.end(), funcCode.begin(), funcCode.end());
     }
+
+    // Emit static variables from symbol table
+    auto staticDefs = convertSymbolsToTAC(symTab);
+    code.insert(code.end(), staticDefs.begin(), staticDefs.end());
 
     return code;
   }
