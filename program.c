@@ -1,35 +1,34 @@
-// int fac(int n){
-//     int res = 1;
-//     for (int i = 1; i <= n; i++) {
-//         res *= i;
-//     }
-//     return res;
-// }
+// A global variable to test taking the address of global symbols.
+int global_var = 50;
 
+int main() {
+    int local_var_a;
+    int local_var_b;
+    int *ptr; // Our pointer
 
-// int main() {
-//     // static int counter = 7;
-//     // static long counter2 = 7L;
-//     // int z = counter + counter2;
-    
-//     // int a = 12;
-//     // long b = 32L;
-    
-//     // long int c = b + a; 
+    // --- Test 1: Address-of and Store to a Pointer ---
+    // Should generate 'lea' for the address of 'local_var_a'
+    // and store it into the stack space for 'ptr'.
+    ptr = &local_var_a;
 
-//     int result;
-//     result = fac(5);
-    
-//     return result;
-//  }
+    // --- Test 2: Assignment to a Dereferenced Pointer ---
+    // This is the most important test. It should generate a 'store_ptr'
+    // (sw or sd) instruction using the address stored in the 'ptr' register.
+    *ptr = 100;
 
-// int main() {
-//     unsigned int a = 10;
-//     int b = 20;
-//     unsigned int c = a + b; // Should be 30UL
-//     return c; // Return 30UL
-// }
+    // --- Test 3: Reading from a Dereferenced Pointer ---
+    // This should generate a 'load_ptr' (lw or ld) instruction.
+    local_var_b = *ptr; // local_var_b should now be 100.
 
-int main(){
-    return 5; // Return 4.0
+    // --- Test 4: Using a Global Variable's Address ---
+    // Should generate 'la' for the address of 'global_var'.
+    ptr = &global_var;
+
+    // --- Test 5: Complex expression ---
+    // Tests loading a local, loading a pointer, dereferencing the pointer,
+    // performing an operation, and storing the result.
+    local_var_b = local_var_b + *ptr; // 100 + 50 = 150
+
+    // The program should exit with the final calculated value.
+    return local_var_b; 
 }

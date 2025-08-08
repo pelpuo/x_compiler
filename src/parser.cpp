@@ -187,20 +187,26 @@ ASTProgram *Parser::parse() {
 
 ASTProgram *Parser::parseProgram() {
   ASTProgram *program = new ASTProgram();
-  FuncDecl *func;
 
-  while (isTypeSpecifier(token.type) || token.type == TokenType::STATIC ||
-         token.type == TokenType::EXTERN || token.type == TokenType::CONST) {
-    Declaration *decl = parseDeclaration();
-    FuncDecl *func = dynamic_cast<FuncDecl *>(decl);
-    if (!func) {
-      std::cerr << "ERROR: Top-level declarations must be functions\n";
-      exit(1);
+  // Keep parsing as long as we see the start of a global declaration
+  while (token.type != TokenType::EOI) {
+    if (!isTypeSpecifier(token.type) && token.type != TokenType::STATIC &&
+        token.type != TokenType::EXTERN && token.type != TokenType::CONST) {
+      break; // Exit if it's not a declaration
     }
-    if (func->body)
-      program->addFunction(std::unique_ptr<FuncDecl>(func));
-    else
-      program->addPrototype(std::unique_ptr<FuncDecl>(func));
+
+    // This will return either a FuncDecl* or a VarDecl*
+    Declaration *decl = parseDeclaration();
+
+    if (decl) {
+      // Instead of assuming it's a function, we add it to a general list.
+      // Your later compiler passes (resolveSymbol, typeCheck, generateTAC)
+      // will then operate on this list of declarations.
+      program->addDeclaration(std::unique_ptr<Declaration>(decl));
+    } else {
+      // If parseDeclaration returns null, something is wrong
+      error();
+    }
   }
 
   return program;
@@ -447,7 +453,6 @@ FuncDecl *Parser::parseFuncDeclOrProto(std::string funcName,
                       std::move(returnType));
 }
 
-
 Stmt *Parser::parseStatement() {
   if (token.type == TokenType::RETURN) {
     consume(TokenType::RETURN);
@@ -596,6 +601,12 @@ Stmt *Parser::parseStatement() {
     }
 
     return newSwitch;
+  }
+
+  else {
+    Expr *expr = parseExpr();
+    consume(TokenType::SEMICOLON);
+    return new ExprStmt(std::unique_ptr<Expr>(expr));
   }
 
   return nullptr;

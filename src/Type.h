@@ -5,7 +5,15 @@
 
 class Type {
 public:
-  enum class Kind { INT, LONG, FUNCTION, UNSIGNED_INT, UNSIGNED_LONG, DOUBLE, POINTER };
+  enum class Kind {
+    INT,
+    LONG,
+    FUNCTION,
+    UNSIGNED_INT,
+    UNSIGNED_LONG,
+    DOUBLE,
+    POINTER
+  };
   virtual Kind getKind() const = 0;
   virtual ~Type() = default;
 
@@ -13,6 +21,19 @@ public:
   virtual std::string toString() const = 0;
   virtual bool isFunctionType() const { return false; }
   virtual bool isPointerType() const { return false; }
+  virtual bool isDouble() const { return false; }
+
+  virtual bool equals(const Type *other) const {
+    return getKind() == other->getKind();
+  }
+
+  virtual bool isIntegerType() const {
+    return getKind() == Kind::INT || getKind() == Kind::UNSIGNED_INT ||
+           getKind() == Kind::LONG || getKind() == Kind::UNSIGNED_LONG;
+  }
+  virtual bool isArithmeticType() const {
+    return isIntegerType() || isDouble();
+  }
 };
 
 class IntType : public Type {
@@ -58,6 +79,8 @@ public:
   std::unique_ptr<Type> clone() const override {
     return std::make_unique<DoubleType>(*this);
   }
+
+  bool isDouble() const override { return true; }
 };
 
 class PointerType : public Type {
@@ -80,9 +103,17 @@ public:
 
   bool isPointerType() const override { return true; }
 
+  bool equals(const Type *other) const override {
+    if (other->getKind() != Kind::POINTER)
+      return false;
+    auto otherPtr = static_cast<const PointerType *>(other);
+    if (!referencedType && !otherPtr->referencedType)
+      return true;
+    if (!referencedType || !otherPtr->referencedType)
+      return false;
+    return referencedType->equals(otherPtr->referencedType.get());
+  }
 };
-
-
 
 class FunctionType : public Type {
   std::vector<std::unique_ptr<Type>> paramTypes;
@@ -126,7 +157,20 @@ public:
   const Type *getReturnType() const { return returnType.get(); }
 
   std::unique_ptr<Type> clone() const override {
-    return std::make_unique<FunctionType>(*this); 
+    return std::make_unique<FunctionType>(*this);
   }
   bool isFunctionType() const override { return true; }
+
+  bool equals(const Type *other) const override {
+    if (other->getKind() != Kind::FUNCTION)
+      return false;
+    auto otherFunc = static_cast<const FunctionType *>(other);
+    if (paramTypes.size() != otherFunc->paramTypes.size())
+      return false;
+    for (size_t i = 0; i < paramTypes.size(); ++i) {
+      if (!paramTypes[i]->equals(otherFunc->paramTypes[i].get()))
+        return false;
+    }
+    return returnType->equals(otherFunc->returnType.get());
+  }
 };

@@ -17,9 +17,9 @@ void Lexer::next(Token &token) {
   }
 
   // Tokenizing identifiers
-  if (isalpha(*BufferPtr)) {
+  if (isalpha(*BufferPtr) || *BufferPtr == '_') {
     const char *end = BufferPtr + 1;
-    while (isalnum(*end))
+    while (isalnum(*end) || *end == '_')
       ++end;
 
     std::string value(BufferPtr, end);

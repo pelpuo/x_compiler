@@ -328,6 +328,43 @@ public:
                 outfile << "    slli " << dst << ", " << src << ", 32\n";
                 outfile << "    srli " << dst << ", " << dst << ", 32\n";
             }
+            else if (tac.op == "getAddress") {
+                std::string dstReg = mapToRegister(tac.result);
+                // If the variable is on the stack (local)
+                if (varMap.count(tac.arg1)) {
+                    outfile << "    lea " << dstReg << ", " << varMap[tac.arg1].offset << "(s0)\n";
+                } 
+                // Otherwise, it must be a global/static variable
+                else {
+                    outfile << "    la " << dstReg << ", " << tac.arg1 << "\n";
+                }
+            }
+            else if (tac.op == "load_ptr") {
+                const std::string& type = tac.arg2;
+                std::string srcPtrReg = ensureLoaded(tac.arg1); // Register holding the address
+
+                if (isFloatType(type)) {
+                    std::string dstReg = mapToFloatRegister(tac.result);
+                    outfile << "    fld " << dstReg << ", 0(" << srcPtrReg << ")\n";
+                } else {
+                    std::string dstReg = mapToRegister(tac.result);
+                    std::string op = (type == "int" || type == "unsigned_int") ? "lw" : "ld";
+                    outfile << "    " << op << " " << dstReg << ", 0(" << srcPtrReg << ")\n";
+                }
+            }
+            else if (tac.op == "store_ptr") {
+                const std::string& type = tac.arg2;
+                std::string dstPtrReg = ensureLoaded(tac.result); // Register holding the address
+
+                if (isFloatType(type)) {
+                    std::string srcValReg = ensureFloatLoaded(tac.arg1);
+                    outfile << "    fsd " << srcValReg << ", 0(" << dstPtrReg << ")\n";
+                } else {
+                    std::string srcValReg = ensureLoaded(tac.arg1); // Register with the value
+                    std::string op = (type == "int" || type == "unsigned_int") ? "sw" : "sd";
+                    outfile << "    " << op << " " << srcValReg << ", 0(" << dstPtrReg << ")\n";
+                }
+            }
             // Unhandled
             else {
                 std::cerr << "FATAL: Unknown TAC operation in ASM generation: " << tac.op << "\n";

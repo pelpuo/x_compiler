@@ -149,6 +149,7 @@ class SymbolTable {
   }
 
 public:
+  const Type *currentFunctionReturnType = nullptr;
   std::unordered_map<std::string, SymbolInfo>
       globalScope; // Stores file-scope decls and all functions
   void enterScope() { scopes.emplace_back(); }

@@ -16,6 +16,8 @@ class Factor;
 class BinaryOp;
 class UnaryOp;
 class WithDecl;
+class Dereference;
+class AddrOf;
 
 class ConstInt;
 class ConstLong;
@@ -76,11 +78,16 @@ class Expr : public AST {
 public:
   virtual ~Expr() = default;
 
-  std::unique_ptr<Type> expType = nullptr; // <--- NEW
+  std::unique_ptr<Type> expType = nullptr; // existing type info
+  bool isLValue = false;                   // NEW: lvalue tracking
 
+  // ---- Type accessors ----
   void setExprType(std::unique_ptr<Type> t) { expType = std::move(t); }
-
   Type *getExprType() const { return expType.get(); }
+
+  // ---- LValue accessors ----
+  void setLValue(bool val) { isLValue = val; }
+  bool getLValue() const { return isLValue; }
 
   virtual void print() = 0;
 };
@@ -355,6 +362,8 @@ public:
     // std::cout << "Typechecked Variable: " << name
     //           << ", type: " << exprType->toString() << std::endl;
 
+    setLValue(true); // variables are lvalues
+
     return this;
   }
 };
@@ -504,6 +513,46 @@ public:
       return this;
     }
 
+    // Handle Equal and NotEqual operators with pointer-aware logic
+    if (op == TokenType::EQUAL_EQUAL || op == TokenType::NOT_EQUAL) {
+      const Type *commonType = nullptr;
+      bool eitherIsPointer = lt->isPointerType() || rt->isPointerType();
+
+      if (eitherIsPointer) {
+        // Use get_common_pointer_type which expects Expr*, pass your expr
+        // pointers
+        commonType =
+            TypeChecker::get_common_pointer_type(left.get(), right.get());
+      } else {
+        commonType = TypeChecker::get_common_type(lt, rt);
+      }
+
+      // Convert operands to common type
+      left.reset(TypeChecker::convert_to(left.release(), commonType));
+      right.reset(TypeChecker::convert_to(right.release(), commonType));
+
+      // Equality comparison result is int
+      this->setExprType(std::make_unique<IntType>());
+      return this;
+    }
+
+    // Reject arithmetic * / % on pointers
+    if ((op == TokenType::MUL || op == TokenType::DIV ||
+         op == TokenType::MOD) &&
+        (lt->isPointerType() || rt->isPointerType())) {
+      std::cerr << "ERROR: Cannot apply arithmetic operator '"
+                << TokenStr[(int)op] << "' to pointer types\n";
+      exit(1);
+    }
+
+    // For other ops, disallow pointer operands for now or handle if you
+    // implement pointer arithmetic later
+    if (lt->isPointerType() || rt->isPointerType()) {
+      std::cerr << "ERROR: Unsupported binary operator '" << TokenStr[(int)op]
+                << "' for pointer types\n";
+      exit(1);
+    }
+
     const Type *common = TypeChecker::get_common_type(lt, rt);
 
     // This is the fix: Release ownership, convert, and reset the unique_ptr.
@@ -642,10 +691,23 @@ public:
         std::cerr
             << "ERROR: Cannot apply bitwise complement (~) to type 'double'\n";
         exit(1);
+      } else if (innerType->getKind() == Type::Kind::POINTER) {
+        std::cerr
+            << "ERROR: Cannot apply bitwise complement (~) to type 'pointer'\n";
+        exit(1);
       }
       this->setExprType(innerType->clone());
       break;
     case TokenType::MINUS:
+      if (innerType->getKind() == Type::Kind::POINTER) {
+        std::cerr
+            << "ERROR: Cannot apply bitwise complement (~) to type 'pointer'\n";
+        exit(1);
+      }
+      // Propagate operand's type
+      cout << "UnaryOp: " << TokenStr[(int)op]
+           << " with operand type: " << innerType->toString() << std::endl;
+      this->setExprType(innerType->clone());
     case TokenType::INCREMENT:
     case TokenType::DECREMENT:
       // Propagate operand's type
@@ -672,6 +734,131 @@ public:
 
 //////////////////////////////////////////////////////////////////////////
 
+class Dereference : public Expr {
+public:
+  std::unique_ptr<Expr> operand;
+  Dereference(std::unique_ptr<Expr> operand) : operand(std::move(operand)) {}
+  void print() {
+    cout << "Dereference: *";
+    operand->print();
+  }
+
+  std::vector<TAC> generateTAC(std::string &tempVar) override {
+    std::vector<TAC> code;
+    std::string ptrTemp;
+
+    // 1. Generate TAC for the operand to get the pointer address into ptrTemp.
+    auto operandCode = operand->generateTAC(ptrTemp);
+    code.insert(code.end(), operandCode.begin(), operandCode.end());
+
+    // 2. Create a new temporary variable for the dereferenced value.
+    tempVar = "t" + std::to_string(tempVarCounter++);
+
+    // 3. Emit the "load_ptr" instruction to read from the address in ptrTemp.
+    code.push_back(TAC("load_ptr", ptrTemp, "", tempVar));
+
+    return code;
+  }
+
+  void resolveSymbol(SymbolTable &symTab) override {
+    operand->resolveSymbol(symTab);
+  }
+
+  Expr *typeCheck(SymbolTable &symTab) override {
+    std::cout << "Typechecking Dereference" << std::endl;
+
+    // 1. Type-check the operand first
+    Expr *checkedOperand = operand->typeCheck(symTab);
+    if (checkedOperand != operand.get()) {
+      operand.reset(checkedOperand);
+    }
+
+    // 2. Get operand type
+    const Type *operandType = operand->getExprType();
+    if (!operandType) {
+      std::cerr << "ERROR: Dereference operand has no type\n";
+      exit(1);
+    }
+
+    // 3. Require that the operand be a pointer type
+    if (operandType->getKind() != Type::Kind::POINTER) {
+      std::cerr << "ERROR: Cannot dereference non-pointer type '"
+                << operandType->toString() << "'\n";
+      exit(1);
+    }
+
+    // 4. Set the resulting expression type to the pointed-to type
+    const PointerType *ptrType = static_cast<const PointerType *>(operandType);
+    if (!ptrType->referencedType) {
+      std::cerr << "ERROR: Pointer type missing referenced type\n";
+      exit(1);
+    }
+    this->setExprType(ptrType->referencedType->clone());
+    setLValue(true);
+
+    return this;
+  }
+};
+
+//////////////////////////////////////////////////////////////////////////
+
+class AddrOf : public Expr {
+public:
+  std::unique_ptr<Expr> operand;
+  AddrOf(std::unique_ptr<Expr> operand) : operand(std::move(operand)) {}
+  void print() {
+    cout << "AddrOf: &";
+    operand->print();
+  }
+
+  std::vector<TAC> generateTAC(std::string &tempVar) override {
+    std::vector<TAC> code;
+
+    // Check if the operand is a Dereference operation (&*ptr)
+    if (auto *deref = dynamic_cast<Dereference *>(operand.get())) {
+      // The & and * cancel out. Just generate the code for the inner pointer
+      // expression.
+      return deref->operand->generateTAC(tempVar);
+
+      // Check if the operand is a simple variable (&var)
+    } else if (auto *var = dynamic_cast<Variable *>(operand.get())) {
+      tempVar = "t" + std::to_string(AST::tempVarCounter++);
+      // Use the "getAddress" instruction.
+      code.push_back(TAC("getAddress", var->name, "", tempVar));
+      return code;
+
+    } else {
+      // Handling more complex cases like &a[i] or &s.m would go here.
+      // For now, we can report an error for unsupported cases.
+      std::cerr << "ERROR: Address-of operator can only be applied to "
+                   "variables or dereferences."
+                << std::endl;
+      exit(1);
+    }
+  }
+
+  void resolveSymbol(SymbolTable &symTab) override {
+    operand->resolveSymbol(symTab);
+  }
+
+  Expr *typeCheck(SymbolTable &symTab) {
+    Expr *checkedOperand = operand->typeCheck(symTab);
+    if (checkedOperand != operand.get())
+      operand.reset(checkedOperand);
+
+    if (!operand->getLValue()) {
+      std::cerr << "ERROR: Cannot take address of non-lvalue\n";
+      exit(1);
+    }
+
+    setExprType(std::make_unique<PointerType>(operand->getExprType()->clone()));
+    setLValue(false); // &expr is not an lvalue
+    return this;
+  }
+};
+
+//////////////////////////////////////////////////////////////////////////
+
 // Variable assignment (e.g., `x = 5;`)
 class Assignment : public Expr {
 public:
@@ -689,28 +876,66 @@ public:
     value->print();
   }
 
+  // std::vector<TAC> generateTAC(std::string &tempVar) override {
+  //   std::vector<TAC> code;
+  //   std::string nameTemp, valueTemp;
+
+  //   // FIX: Don't generate TAC for the LHS as an rvalue
+  //   Variable *var = dynamic_cast<Variable *>(name.get());
+  //   if (!var) {
+  //     std::cerr << "ERROR: LHS of assignment must be a variable" <<
+  //     std::endl; exit(1);
+  //   }
+  //   nameTemp = var->name; // Just use the variable name
+
+  //   // Generate TAC for the value
+  //   auto valueCode = value->generateTAC(valueTemp);
+  //   code.insert(code.end(), valueCode.begin(), valueCode.end());
+
+  //   // code.push_back(TAC("store", valueTemp, "int", nameTemp));
+  //   code.push_back(
+  //       TAC("store", valueTemp, this->expType->toString(), nameTemp));
+
+  //   tempVar = valueTemp;
+
+  //   return code;
+  // }
+
+  // In AST.h
+
   std::vector<TAC> generateTAC(std::string &tempVar) override {
     std::vector<TAC> code;
-    std::string nameTemp, valueTemp;
+    std::string valueTemp;
 
-    // FIX: Don't generate TAC for the LHS as an rvalue
-    Variable *var = dynamic_cast<Variable *>(name.get());
-    if (!var) {
-      std::cerr << "ERROR: LHS of assignment must be a variable" << std::endl;
-      exit(1);
-    }
-    nameTemp = var->name; // Just use the variable name
-
-    // Generate TAC for the value
+    // First, always generate TAC for the right-hand side value.
     auto valueCode = value->generateTAC(valueTemp);
     code.insert(code.end(), valueCode.begin(), valueCode.end());
 
-    // code.push_back(TAC("store", valueTemp, "int", nameTemp));
-    code.push_back(
-        TAC("store", valueTemp, this->expType->toString(), nameTemp));
+    // Check if the left-hand side is a dereference (*ptr = ...)
+    if (auto *deref = dynamic_cast<Dereference *>(name.get())) {
+      std::string ptrTemp;
 
-    tempVar = valueTemp;
+      // Generate TAC for the expression that gives us the pointer address
+      // (*ptr).
+      auto ptrCode = deref->operand->generateTAC(ptrTemp);
+      code.insert(code.end(), ptrCode.begin(), ptrCode.end());
 
+      // Emit "store_ptr" to write the value into the memory location.
+      code.push_back(TAC("store_ptr", valueTemp, "", ptrTemp));
+
+      // Otherwise, it's a regular variable assignment (var = ...)
+    } else if (auto *var = dynamic_cast<Variable *>(name.get())) {
+      // This is the existing logic for variable assignment.
+      code.push_back(
+          TAC("store", valueTemp, this->expType->toString(), var->name));
+
+    } else {
+      std::cerr << "ERROR: Left-hand side of assignment is not a valid lvalue."
+                << std::endl;
+      exit(1);
+    }
+
+    tempVar = valueTemp; // The result of an assignment is the assigned value.
     return code;
   }
 
@@ -724,6 +949,11 @@ public:
     std::cout << "Typechecking Assignment: " << std::endl;
 
     Expr *lhsChecked = name->typeCheck(symTab);
+    if (!lhsChecked->getLValue()) {
+      std::cerr << "ERROR: Left-hand side of assignment is not an lvalue\n";
+      exit(1);
+    }
+
     if (lhsChecked != name.get()) {
       name.reset(lhsChecked);
     }
@@ -740,13 +970,13 @@ public:
       std::cerr << "ERROR: Assignment operands missing type info." << std::endl;
       exit(1);
     }
-    if (!dynamic_cast<Variable *>(name.get())) {
-      std::cerr << "ERROR: LHS of assignment must be a variable." << std::endl;
-      exit(1);
-    }
+    // if (!dynamic_cast<Variable *>(name.get())) {
+    //   std::cerr << "ERROR: LHS of assignment must be a variable." <<
+    //   std::endl; exit(1);
+    // }
 
     // Simplify the conversion to a direct release-and-reset.
-    value.reset(TypeChecker::convert_to(value.release(), lt));
+    value.reset(TypeChecker::convert_by_assignment(value.release(), lt));
 
     this->setExprType(lt->clone());
     return this;
@@ -961,119 +1191,31 @@ public:
 
   Expr *typeCheck(SymbolTable &symTab) override {
     std::cout << "Typechecking Cast: " << type->toString() << std::endl;
-    // Typecheck the inner expression
+
+    // Type check the inner expression
     Expr *innerResult = expr->typeCheck(symTab);
     if (innerResult != expr.get()) {
       expr.reset(innerResult);
     }
 
-    // The result of a cast has the type we cast to
-    this->setExprType(type->clone());
-    return this;
-  }
-};
+    const Type *srcType = expr->getExprType();
+    const Type *destType = type.get();
 
-//////////////////////////////////////////////////////////////////////////
-class AddrOf : public Expr {
-public:
-  std::unique_ptr<Expr> operand;
-  AddrOf(std::unique_ptr<Expr> operand) : operand(std::move(operand)) {}
-  void print() {
-    cout << "AddrOf: &";
-    operand->print();
-  }
-  std::vector<TAC> generateTAC(std::string &tempVar) override {
-    std::vector<TAC> code;
-    std::string operandTemp;
-
-    // Generate TAC for the operand
-    auto operandCode = operand->generateTAC(operandTemp);
-    code.insert(code.end(), operandCode.begin(), operandCode.end());
-
-    // Create a new temporary variable for the address
-    tempVar = "t" + std::to_string(tempVarCounter++);
-    code.push_back(TAC("addr", operandTemp, "", tempVar));
-
-    return code;
-  }
-
-  void resolveSymbol(SymbolTable &symTab) override {
-    operand->resolveSymbol(symTab);
-  }
-
-  Expr *typeCheck(SymbolTable &symTab) override {
-    std::cout << "Typechecking AddrOf" << std::endl;
-
-    // Type check the operand first
-    Expr *innerResult = operand->typeCheck(symTab);
-    if (innerResult != operand.get()) {
-      operand.reset(innerResult);
-    }
-
-    const Type *operandType = operand->getExprType();
-    if (!operandType) {
-      std::cerr << "ERROR: Missing type in AddrOf operand\n";
+    if (!srcType || !destType) {
+      std::cerr << "ERROR: Missing type in Cast\n";
       exit(1);
     }
 
-    // The result type is a pointer to the operand's type
-    this->setExprType(std::make_unique<PointerType>(operandType->clone()));
-    return this;
-  }
-};
-
-//////////////////////////////////////////////////////////////////////////
-class Dereference : public Expr {
-public:
-  std::unique_ptr<Expr> operand;
-  Dereference(std::unique_ptr<Expr> operand) : operand(std::move(operand)) {}
-  void print() {
-    cout << "Dereference: *";
-    operand->print();
-  } 
-
-  std::vector<TAC> generateTAC(std::string &tempVar) override {
-    std::vector<TAC> code;
-    std::string operandTemp;
-
-    // Generate TAC for the operand
-    auto operandCode = operand->generateTAC(operandTemp);
-    code.insert(code.end(), operandCode.begin(), operandCode.end());
-
-    // Create a new temporary variable for the dereferenced value
-    tempVar = "t" + std::to_string(tempVarCounter++);
-    code.push_back(TAC("load", operandTemp, "", tempVar));
-
-    return code;
-  }
-
-  void resolveSymbol(SymbolTable &symTab) override {
-    operand->resolveSymbol(symTab);
-  }
-
-  Expr *typeCheck(SymbolTable &symTab) override {
-    std::cout << "Typechecking Dereference" << std::endl;
-
-    // Type check the operand first
-    Expr *innerResult = operand->typeCheck(symTab);
-    if (innerResult != operand.get()) {
-      operand.reset(innerResult);
-    }
-
-    const Type *operandType = operand->getExprType();
-    if (!operandType) {
-      std::cerr << "ERROR: Missing type in Dereference operand\n";
+    // Disallow pointer <-> double casts
+    if ((srcType->isPointerType() && destType->isDouble()) ||
+        (srcType->isDouble() && destType->isPointerType())) {
+      std::cerr << "ERROR: Cannot cast between pointer and double types\n";
       exit(1);
     }
 
-    // The result type is the pointed-to type
-    if (operandType->getKind() != Type::Kind::POINTER) {
-      std::cerr << "ERROR: Dereference requires a pointer type\n";
-      exit(1);
-    }
+    // Otherwise, allow cast and set type to destination type
+    this->setExprType(destType->clone());
 
-    this->setExprType(
-        static_cast<const PointerType *>(operandType)->referencedType->clone());
     return this;
   }
 };
@@ -1273,7 +1415,7 @@ public:
     for (size_t i = 0; i < paramTypes.size(); ++i) {
       Expr *arg = args->args[i]->typeCheck(symTab);
       const Type *expected = paramTypes[i].get();
-      arg = TypeChecker::convert_to(arg, expected);
+      arg = TypeChecker::convert_by_assignment(arg, expected);
       if (arg != args->args[i].get()) {
         args->args[i].reset(arg);
       }
@@ -1430,20 +1572,24 @@ public:
     expr->resolveSymbol(symTab);
   }
 
-  // Expr *typeCheck(SymbolTable &symTab) override {
-  //   cout << "Typechecking ReturnStmt" << endl;
-  //   return expr ? expr->typeCheck(symTab) : nullptr;
-  // }
-
   // In AST.h, replace the existing ReturnStmt::typeCheck method
   Expr *typeCheck(SymbolTable &symTab) override {
     cout << "Typechecking ReturnStmt" << endl;
+
+    const Type *funcRetType = symTab.currentFunctionReturnType;
+
+    if (!funcRetType) {
+      std::cerr << "Return statement outside of function\n";
+      exit(1);
+    }
+
     if (expr) {
       // Capture the result and update the pointer if it changed.
       Expr *newExpr = expr->typeCheck(symTab);
-      if (newExpr != expr.get()) {
+      if (newExpr != expr.get())
         expr.reset(newExpr);
-      }
+      expr.reset(
+          TypeChecker::convert_by_assignment(expr.release(), funcRetType));
     }
     return nullptr; // A statement does not return an expression.
   }
@@ -2123,6 +2269,32 @@ public:
 
   Expr *typeCheck(SymbolTable &symTab) override {
     cout << "Type checking variable declaration: " << name << endl;
+
+    // Check for static initializers before declaring the variable
+    if (storage == StorageClass::STATIC && initializer) {
+      bool isNullPtr = expType->isPointerType() &&
+                       TypeChecker::is_null_pointer_constant(initializer.get());
+
+      // --- START: NEW LOGIC FOR STATIC POINTERS ---
+      if (expType->isPointerType()) {
+        if (isNullPtr) {
+          // This is the supported case: static int *p = 0;
+          // We can proceed. The symbol table logic will handle storing it
+          // as ULongInit(0).
+        } else if (dynamic_cast<AddrOf *>(initializer.get())) {
+          // This is the unsupported case: static int *p = &a;
+          std::cerr << "ERROR: Initializer for static pointer '" << name
+                    << "' is not a constant null pointer." << std::endl;
+          exit(1);
+        } else if (!dynamic_cast<Constant *>(initializer.get())) {
+          // Reject any other non-constant initializer for static variables
+          std::cerr << "ERROR: Initializer for static variable '" << name
+                    << "' is not a constant expression." << std::endl;
+          exit(1);
+        }
+      }
+      // --- END: NEW LOGIC FOR STATIC POINTERS ---
+    }
     // Declare the variable first so it's available in its own initializer
     if (!symTab.declareVariable(name, expType->clone())) {
       std::cerr << "ERROR: Redeclaration of variable '" << name << "'\n";
@@ -2145,10 +2317,13 @@ public:
 
       // Insert implicit cast if needed
       if (initType->getKind() != declType->getKind()) {
-        auto casted =
-            std::make_unique<Cast>(std::move(initializer), declType->clone());
-        casted->setExprType(declType->clone());
-        initializer = std::move(casted);
+        // auto casted =
+        //     std::make_unique<Cast>(std::move(initializer),
+        //     declType->clone());
+        // casted->setExprType(declType->clone());
+        // initializer = std::move(casted);
+        initializer.reset(TypeChecker::convert_by_assignment(
+            initializer.release(), declType));
       }
     }
     return nullptr;
@@ -2239,6 +2414,7 @@ public:
 
   Expr *typeCheck(SymbolTable &symTab) override {
     cout << "Type checking function declaration: " << name << endl;
+
     if (body) {
       symTab.enterScope();
 
@@ -2247,6 +2423,8 @@ public:
         std::cerr << "ERROR: Function type is not FunctionType\n";
         exit(1);
       }
+
+      symTab.currentFunctionReturnType = fnType->getReturnType();
 
       const auto &paramTypes = fnType->getParamTypes();
       if (paramTypes.size() != params.size()) {
@@ -2263,6 +2441,8 @@ public:
       }
 
       body->typeCheck(symTab);
+
+      symTab.currentFunctionReturnType = nullptr;
       symTab.exitScope();
     }
 
@@ -2276,6 +2456,7 @@ class ASTProgram : public AST {
 public:
   std::vector<std::unique_ptr<FuncDecl>> functions;
   std::vector<std::unique_ptr<FuncDecl>> prototypes;
+  std::vector<std::unique_ptr<Declaration>> declarations;
 
   void addFunction(std::unique_ptr<FuncDecl> func) {
     functions.push_back(std::move(func));
@@ -2283,6 +2464,10 @@ public:
 
   void addPrototype(std::unique_ptr<FuncDecl> proto) {
     prototypes.push_back(std::move(proto));
+  }
+
+  void addDeclaration(std::unique_ptr<Declaration> decl) {
+    declarations.push_back(std::move(decl));
   }
 
   void print() {
@@ -2302,15 +2487,24 @@ public:
   std::vector<TAC> generateTAC(std::string &tempVar,
                                const SymbolTable &symTab) {
     std::vector<TAC> code;
-    for (auto &func : functions) {
-      std::string tempVar;
-      auto funcCode = func->generateTAC(tempVar);
-      code.insert(code.end(), funcCode.begin(), funcCode.end());
-    }
+    // for (auto &func : functions) {
+    //   std::string tempVar;
+    //   auto funcCode = func->generateTAC(tempVar);
+    //   code.insert(code.end(), funcCode.begin(), funcCode.end());
+    // }
 
-    // Emit static variables from symbol table
-    auto staticDefs = convertSymbolsToTAC(symTab);
-    code.insert(code.end(), staticDefs.begin(), staticDefs.end());
+    // // Emit static variables from symbol table
+    // auto staticDefs = convertSymbolsToTAC(symTab);
+    // code.insert(code.end(), staticDefs.begin(), staticDefs.end());
+
+    // Iterate over ALL declarations that the parser found.
+    for (const auto &decl : declarations) {
+      if (decl) {         // Safety check
+        std::string temp; // Dummy temp var for the call
+        auto declCode = decl->generateTAC(temp);
+        code.insert(code.end(), declCode.begin(), declCode.end());
+      }
+    }
 
     return code;
   }
