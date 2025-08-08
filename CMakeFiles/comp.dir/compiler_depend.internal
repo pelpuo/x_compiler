@@ -890,10 +890,6 @@ CMakeFiles/comp.dir/src/main.cpp.o
  /home/panda/Documents/Github/micomp/src/TAC.h
  /home/panda/Documents/Github/micomp/src/TypeChecker.h
  /home/panda/Documents/Github/micomp/src/TAC_to_ASM.h
- /usr/include/c++/11/map
- /usr/include/c++/11/bits/stl_tree.h
- /usr/include/c++/11/bits/stl_map.h
- /usr/include/c++/11/bits/stl_multimap.h
  /usr/include/c++/11/algorithm
  /usr/include/c++/11/bits/stl_algo.h
  /usr/include/c++/11/bits/algorithmfwd.h
@@ -902,6 +898,10 @@ CMakeFiles/comp.dir/src/main.cpp.o
  /usr/include/c++/11/pstl/glue_algorithm_defs.h
  /usr/include/c++/11/functional
  /usr/include/c++/11/bits/std_function.h
+ /usr/include/c++/11/map
+ /usr/include/c++/11/bits/stl_tree.h
+ /usr/include/c++/11/bits/stl_map.h
+ /usr/include/c++/11/bits/stl_multimap.h
 
 CMakeFiles/comp.dir/src/parser.cpp.o
  /home/panda/Documents/Github/micomp/src/parser.cpp

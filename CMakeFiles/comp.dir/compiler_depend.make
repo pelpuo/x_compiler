@@ -885,10 +885,6 @@ CMakeFiles/comp.dir/src/main.cpp.o: src/main.cpp \
   src/TAC.h \
   src/TypeChecker.h \
   src/TAC_to_ASM.h \
-  /usr/include/c++/11/map \
-  /usr/include/c++/11/bits/stl_tree.h \
-  /usr/include/c++/11/bits/stl_map.h \
-  /usr/include/c++/11/bits/stl_multimap.h \
   /usr/include/c++/11/algorithm \
   /usr/include/c++/11/bits/stl_algo.h \
   /usr/include/c++/11/bits/algorithmfwd.h \
@@ -896,7 +892,11 @@ CMakeFiles/comp.dir/src/main.cpp.o: src/main.cpp \
   /usr/include/c++/11/bits/uniform_int_dist.h \
   /usr/include/c++/11/pstl/glue_algorithm_defs.h \
   /usr/include/c++/11/functional \
-  /usr/include/c++/11/bits/std_function.h
+  /usr/include/c++/11/bits/std_function.h \
+  /usr/include/c++/11/map \
+  /usr/include/c++/11/bits/stl_tree.h \
+  /usr/include/c++/11/bits/stl_map.h \
+  /usr/include/c++/11/bits/stl_multimap.h
 
 CMakeFiles/comp.dir/src/parser.cpp.o: src/parser.cpp \
   /usr/include/stdc-predef.h \
@@ -1131,13 +1131,13 @@ CMakeFiles/comp.dir/src/parser.cpp.o: src/parser.cpp \
 
 src/parser.cpp:
 
+/usr/include/c++/11/bits/stl_map.h:
+
 /usr/include/c++/11/bits/stl_heap.h:
 
 /usr/include/c++/11/bits/algorithmfwd.h:
 
 /usr/include/c++/11/bits/stl_algo.h:
-
-/usr/include/c++/11/bits/stl_map.h:
 
 src/parser.h:
 
